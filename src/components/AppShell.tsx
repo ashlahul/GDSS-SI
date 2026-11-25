@@ -995,7 +995,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer ${
                 consensusResult
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : completedCount === 3
+                  : completedCount === (decisionMakers.length || 4)
                   ? 'bg-purple-50 text-purple-700 border-purple-200'
                   : 'bg-amber-50 text-amber-700 border-amber-200'
               }`}
@@ -1004,7 +1004,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 className={`w-1.5 h-1.5 rounded-full ${
                   consensusResult
                     ? 'bg-emerald-500'
-                    : completedCount === 3
+                    : completedCount === (decisionMakers.length || 4)
                     ? 'bg-purple-600 animate-pulse'
                     : 'bg-amber-500'
                 }`}
@@ -1012,7 +1012,7 @@ export const AppShell: React.FC<AppShellProps> = ({
               <span>
                 {consensusResult
                   ? 'Konsensus Disahkan'
-                  : `Suara: ${completedCount}/3`}
+                  : `Suara: ${completedCount}/${decisionMakers.length || 4}`}
               </span>
             </button>
 

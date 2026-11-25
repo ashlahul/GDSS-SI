@@ -58,13 +58,13 @@ export const MethodGuideTab: React.FC<{ onNavigate: (tab: string) => void }> = (
             {
               step: '02',
               title: 'Penilaian Individu',
-              desc: 'Ketua, Sekretaris, dan Bendahara memberi peringkat prioritas 1 hingga N secara mandiri.',
+              desc: 'Ketua, Wakil Ketua, Sekretaris, dan Bendahara memberi peringkat prioritas 1 hingga N secara mandiri.',
               done: true,
             },
             {
               step: '03',
               title: 'Cek Kelengkapan',
-              desc: 'Sistem memverifikasi bahwa seluruh 3 pengambil keputusan telah mengirim penilaian.',
+              desc: `Sistem memverifikasi bahwa seluruh ${decisionMakers.length || 4} pengambil keputusan telah mengirim penilaian.`,
               done: isConsensusReady,
             },
             {
@@ -109,7 +109,7 @@ export const MethodGuideTab: React.FC<{ onNavigate: (tab: string) => void }> = (
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-purple-600" />
             <h2 className="text-xs font-bold text-neutral-800 uppercase tracking-wider">
-              3 Akun Decision Maker & Otoritas
+              {decisionMakers.length || 4} Akun Decision Maker & Otoritas
             </h2>
           </div>
 
@@ -128,20 +128,29 @@ export const MethodGuideTab: React.FC<{ onNavigate: (tab: string) => void }> = (
                 </div>
                 <div className="text-xs min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-neutral-900">{dm.name}</span>
+                    <div>
+                      <span className="font-bold text-neutral-900">{dm.name}</span>
+                      {dm.nim && (
+                        <span className="ml-2 text-[10px] font-mono text-neutral-400">
+                          ({dm.nim})
+                        </span>
+                      )}
+                    </div>
                     {dm.isHighestRole ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
                         Jabatan Tertinggi
                       </span>
                     ) : (
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white border border-neutral-200 text-neutral-600">
-                        {dm.role}
+                        {dm.roleLabel}
                       </span>
                     )}
                   </div>
                   <p className="text-[11px] text-neutral-500 mt-1">
                     {dm.role === 'KETUA' &&
                       'Menilai visi strategis organisasi & berhak mengesahkan konsensus akhir.'}
+                    {dm.role === 'WAKIL_KETUA' &&
+                      'Menilai sinergi antar-divisi, efektivitas koordinasi, dan keberlanjutan program.'}
                     {dm.role === 'SEKRETARIS' &&
                       'Menilai kesiapan administrasi, kalender kerja, dan sumber daya kader.'}
                     {dm.role === 'BENDAHARA' &&
@@ -181,7 +190,8 @@ export const MethodGuideTab: React.FC<{ onNavigate: (tab: string) => void }> = (
                   2. Akumulasi Kelompok
                 </strong>
                 <span>
-                  Total skor Borda dihitung dengan menjumlahkan poin dari Ketua, Sekretaris, dan Bendahara.
+                  Total skor Borda dihitung dengan menjumlahkan poin dari Ketua, Wakil Ketua,
+                  Sekretaris, dan Bendahara.
                 </span>
               </div>
 

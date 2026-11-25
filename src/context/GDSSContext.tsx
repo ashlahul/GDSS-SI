@@ -20,7 +20,8 @@ import {
 export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
   {
     id: 'dm-ketua',
-    name: 'Moch. Asy-Syauqi',
+    name: 'Ashlahul Umam',
+    nim: '240605110008',
     email: 'ketua@ormawa.ac.id',
     role: 'KETUA',
     roleLabel: 'Ketua Umum',
@@ -28,8 +29,19 @@ export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
     avatarColor: 'bg-amber-600',
   },
   {
+    id: 'dm-wakil',
+    name: 'Zakka Yogaraksa',
+    nim: '240605110009',
+    email: 'wakil@ormawa.ac.id',
+    role: 'WAKIL_KETUA',
+    roleLabel: 'Wakil Ketua Umum',
+    isHighestRole: false,
+    avatarColor: 'bg-purple-600',
+  },
+  {
     id: 'dm-sekretaris',
-    name: 'Anisa Rahmawati',
+    name: 'Muhammad Akmalul Fikri',
+    nim: '240605110147',
     email: 'sekretaris@ormawa.ac.id',
     role: 'SEKRETARIS',
     roleLabel: 'Sekretaris Jenderal',
@@ -38,12 +50,13 @@ export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
   },
   {
     id: 'dm-bendahara',
-    name: 'Budi Pratama',
+    name: 'Ega Fikri Prayoga',
+    nim: '240605110151',
     email: 'bendahara@ormawa.ac.id',
     role: 'BENDAHARA',
     roleLabel: 'Bendahara Umum',
     isHighestRole: false,
-    avatarColor: 'bg-indigo-600',
+    avatarColor: 'bg-blue-600',
   },
 ];
 

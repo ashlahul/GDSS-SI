@@ -47,7 +47,7 @@ export const ResultsTab: React.FC<{ onNavigateToConsensus: () => void }> = ({
   }
 
   const details = consensusResult.details;
-  const maxPossiblePoints = details.length * 3;
+  const maxPossiblePoints = details.length * (decisionMakers.length || 4);
   const topWinner = details[0];
 
   const formatRupiah = (val: number) =>
@@ -166,6 +166,7 @@ export const ResultsTab: React.FC<{ onNavigateToConsensus: () => void }> = ({
                   <th className="py-2.5 px-3">Program Kerja</th>
                   <th className="py-2.5 px-3 text-right">Est. Anggaran</th>
                   <th className="py-2.5 px-3 text-center">Ketua</th>
+                  <th className="py-2.5 px-3 text-center">Wakil Ketua</th>
                   <th className="py-2.5 px-3 text-center">Sekretaris</th>
                   <th className="py-2.5 px-3 text-center">Bendahara</th>
                   <th className="py-2.5 px-3 text-center">Total Poin</th>
@@ -195,6 +196,10 @@ export const ResultsTab: React.FC<{ onNavigateToConsensus: () => void }> = ({
                     <td className="py-2.5 px-3 text-center font-mono">
                       #{row.ketuaRank}{' '}
                       <span className="text-purple-600 font-semibold">({row.ketuaPoints})</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-center font-mono">
+                      #{row.wakilRank}{' '}
+                      <span className="text-indigo-600 font-semibold">({row.wakilPoints})</span>
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono">
                       #{row.sekretarisRank}{' '}

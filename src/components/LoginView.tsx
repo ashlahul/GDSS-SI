@@ -40,7 +40,7 @@ export const LoginView: React.FC = () => {
             Login Dashboard GDSS
           </h1>
           <p className="text-xs text-neutral-400">
-            Masuk sebagai Decision Maker (Ketua, Sekretaris, atau Bendahara)
+            Masuk sebagai Decision Maker (Ketua, Wakil Ketua, Sekretaris, atau Bendahara)
           </p>
         </div>
 

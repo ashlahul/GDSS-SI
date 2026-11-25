@@ -1,8 +1,9 @@
-export type RoleType = 'KETUA' | 'SEKRETARIS' | 'BENDAHARA';
+export type RoleType = 'KETUA' | 'WAKIL_KETUA' | 'SEKRETARIS' | 'BENDAHARA';
 
 export interface DecisionMaker {
   id: string;
   name: string;
+  nim: string;
   email: string;
   role: RoleType;
   roleLabel: string;
@@ -36,6 +37,8 @@ export interface BordaDetailRow {
   proker: ProgramKerja;
   ketuaRank: number;
   ketuaPoints: number;
+  wakilRank: number;
+  wakilPoints: number;
   sekretarisRank: number;
   sekretarisPoints: number;
   bendaharaRank: number;

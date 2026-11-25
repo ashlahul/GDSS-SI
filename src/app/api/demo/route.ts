@@ -22,6 +22,13 @@ export async function POST(req: Request) {
       }
 
       const ketuaOrder = [...pIds];
+      const wakilOrder = [...pIds];
+      if (wakilOrder.length >= 2) {
+        const temp = wakilOrder[0];
+        wakilOrder[0] = wakilOrder[1];
+        wakilOrder[1] = temp;
+      }
+
       const sekOrder = [...pIds];
       if (sekOrder.length >= 3) {
         const temp = sekOrder[0];
@@ -42,6 +49,13 @@ export async function POST(req: Request) {
       const voteData = [
         ...ketuaOrder.map((prokerId, idx) => ({
           decisionMakerId: 'dm-ketua',
+          prokerId,
+          rank: idx + 1,
+          bordaPoints: n - idx,
+          submittedAt: now,
+        })),
+        ...wakilOrder.map((prokerId, idx) => ({
+          decisionMakerId: 'dm-wakil',
           prokerId,
           rank: idx + 1,
           bordaPoints: n - idx,

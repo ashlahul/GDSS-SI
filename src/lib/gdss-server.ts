@@ -11,7 +11,8 @@ import {
 export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
   {
     id: 'dm-ketua',
-    name: 'Moch. Asy-Syauqi',
+    name: 'Ashlahul Umam',
+    nim: '240605110008',
     email: 'ketua@ormawa.ac.id',
     password: 'ketua123',
     role: 'KETUA',
@@ -20,8 +21,20 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     avatarColor: 'bg-amber-600',
   },
   {
+    id: 'dm-wakil',
+    name: 'Zakka Yogaraksa',
+    nim: '240605110009',
+    email: 'wakil@ormawa.ac.id',
+    password: 'wakil123',
+    role: 'WAKIL_KETUA',
+    roleLabel: 'Wakil Ketua Umum',
+    isHighestRole: false,
+    avatarColor: 'bg-purple-600',
+  },
+  {
     id: 'dm-sekretaris',
-    name: 'Anisa Rahmawati',
+    name: 'Muhammad Akmalul Fikri',
+    nim: '240605110147',
     email: 'sekretaris@ormawa.ac.id',
     password: 'sekretaris123',
     role: 'SEKRETARIS',
@@ -31,7 +44,8 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
   },
   {
     id: 'dm-bendahara',
-    name: 'Budi Pratama',
+    name: 'Ega Fikri Prayoga',
+    nim: '240605110151',
     email: 'bendahara@ormawa.ac.id',
     password: 'bendahara123',
     role: 'BENDAHARA',
@@ -89,22 +103,52 @@ export const SEED_PROKERS: Omit<ProgramKerja, 'id'>[] = [
   },
 ];
 
+const ROLE_ORDER: Record<RoleType, number> = {
+  KETUA: 1,
+  WAKIL_KETUA: 2,
+  SEKRETARIS: 3,
+  BENDAHARA: 4,
+};
+
 export async function ensureSeeded() {
-  const dmCount = await prisma.decisionMaker.count();
-  if (dmCount === 0) {
-    await prisma.decisionMaker.createMany({
-      data: SEED_DECISION_MAKERS.map((dm) => ({
-        id: dm.id,
-        name: dm.name,
-        email: dm.email,
-        password: dm.password,
-        role: dm.role,
-        roleLabel: dm.roleLabel,
-        isHighestRole: dm.isHighestRole,
-        avatarColor: dm.avatarColor,
-      })),
-      skipDuplicates: true,
+  const existingDms = await prisma.decisionMaker.findMany({
+    select: { id: true, name: true, nim: true },
+  });
+
+  const needsSync =
+    existingDms.length !== SEED_DECISION_MAKERS.length ||
+    SEED_DECISION_MAKERS.some((seed) => {
+      const found = existingDms.find((e) => e.id === seed.id);
+      return !found || found.name !== seed.name || found.nim !== seed.nim;
     });
+
+  if (needsSync) {
+    for (const dm of SEED_DECISION_MAKERS) {
+      await prisma.decisionMaker.upsert({
+        where: { id: dm.id },
+        update: {
+          name: dm.name,
+          nim: dm.nim,
+          email: dm.email,
+          password: dm.password,
+          role: dm.role,
+          roleLabel: dm.roleLabel,
+          isHighestRole: dm.isHighestRole,
+          avatarColor: dm.avatarColor,
+        },
+        create: {
+          id: dm.id,
+          name: dm.name,
+          nim: dm.nim,
+          email: dm.email,
+          password: dm.password,
+          role: dm.role,
+          roleLabel: dm.roleLabel,
+          isHighestRole: dm.isHighestRole,
+          avatarColor: dm.avatarColor,
+        },
+      });
+    }
   }
 
   const prokerCount = await prisma.programKerja.count();
@@ -120,9 +164,7 @@ export async function getFullGDSSState() {
   await ensureSeeded();
 
   const [dms, prokers, allVotes, latestConsensus] = await Promise.all([
-    prisma.decisionMaker.findMany({
-      orderBy: { isHighestRole: 'desc' },
-    }),
+    prisma.decisionMaker.findMany(),
     prisma.programKerja.findMany({
       orderBy: { code: 'asc' },
     }),
@@ -142,15 +184,18 @@ export async function getFullGDSSState() {
     }),
   ]);
 
-  const decisionMakers: DecisionMaker[] = dms.map((dm) => ({
-    id: dm.id,
-    name: dm.name,
-    email: dm.email,
-    role: dm.role as RoleType,
-    roleLabel: dm.roleLabel,
-    isHighestRole: dm.isHighestRole,
-    avatarColor: dm.avatarColor,
-  }));
+  const decisionMakers: DecisionMaker[] = dms
+    .map((dm) => ({
+      id: dm.id,
+      name: dm.name,
+      nim: dm.nim,
+      email: dm.email,
+      role: dm.role as RoleType,
+      roleLabel: dm.roleLabel,
+      isHighestRole: dm.isHighestRole,
+      avatarColor: dm.avatarColor,
+    }))
+    .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
 
   const programKerjaList: ProgramKerja[] = prokers.map((p) => ({
     id: p.id,
@@ -191,6 +236,8 @@ export async function getFullGDSSState() {
       },
       ketuaRank: d.ketuaRank,
       ketuaPoints: d.ketuaPoints,
+      wakilRank: d.wakilRank,
+      wakilPoints: d.wakilPoints,
       sekretarisRank: d.sekretarisRank,
       sekretarisPoints: d.sekretarisPoints,
       bendaharaRank: d.bendaharaRank,

@@ -58,28 +58,33 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
     [programKerjaList]
   );
 
+  const totalDMs = decisionMakers.length || 4;
+
   const liveScores = useMemo(() => {
     const n = programKerjaList.length;
     const kVotes = votes['dm-ketua']?.rankings || [];
+    const wVotes = votes['dm-wakil']?.rankings || [];
     const sVotes = votes['dm-sekretaris']?.rankings || [];
     const bVotes = votes['dm-bendahara']?.rankings || [];
 
     return programKerjaList.map((proker) => {
       const kPts = kVotes.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
+      const wPts = wVotes.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
       const sPts = sVotes.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
       const bPts = bVotes.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
-      const total = kPts + sPts + bPts;
-      const maxPts = Math.max(1, n * 3);
+      const total = kPts + wPts + sPts + bPts;
+      const maxPts = Math.max(1, n * totalDMs);
       return {
         proker,
         kPts,
+        wPts,
         sPts,
         bPts,
         total,
         pct: Math.round((total / maxPts) * 100),
       };
     });
-  }, [programKerjaList, votes]);
+  }, [programKerjaList, votes, totalDMs]);
 
   const sortedLiveScores = useMemo(
     () => [...liveScores].sort((a, b) => b.total - a.total),
@@ -165,10 +170,10 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
             Partisipasi Penilai
           </span>
           <div className="text-2xl font-bold text-purple-700 tabular-nums">
-            {completedCount} / 3 DM
+            {completedCount} / {totalDMs} DM
           </div>
           <p className="text-[11px] text-neutral-500">
-            Ketua, Sekretaris & Bendahara
+            Ketua, Wakil, Sekretaris & Bendahara
           </p>
         </div>
 
@@ -217,7 +222,7 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
               Distribusi Skor Borda per Program Kerja
             </h3>
             <p className="text-xs text-neutral-500">
-              Akumulasi poin preferensi dari Ketua, Sekretaris, dan Bendahara secara real-time
+              Akumulasi poin preferensi dari Ketua, Wakil Ketua, Sekretaris, dan Bendahara secara real-time
             </p>
           </div>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
@@ -319,7 +324,7 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-neutral-500" />
               <h3 className="text-xs font-bold text-neutral-800 uppercase tracking-wider">
-                Status 3 Decision Maker
+                Status {totalDMs} Decision Maker
               </h3>
             </div>
             <button
@@ -354,7 +359,9 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
                           <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                         )}
                       </div>
-                      <p className="text-[10px] text-neutral-400 font-mono">{dm.email}</p>
+                      <p className="text-[10px] text-neutral-400 font-mono">
+                        {dm.nim} • {dm.email}
+                      </p>
                     </td>
                     <td className="py-3 px-3 text-neutral-600">{dm.roleLabel}</td>
                     <td className="py-3 px-4 text-right">
@@ -377,8 +384,8 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
           <div className="p-4 bg-[#f9fafb] border-t border-neutral-100 flex items-center justify-between text-xs">
             <span className="text-neutral-500">
               {isConsensusReady
-                ? 'Semua 3 DM telah selesai menilai.'
-                : `Menunggu ${3 - completedCount} pengambil keputusan lagi.`}
+                ? `Semua ${totalDMs} DM telah selesai menilai.`
+                : `Menunggu ${totalDMs - completedCount} pengambil keputusan lagi.`}
             </span>
             <button
               type="button"

@@ -35,6 +35,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
   const [isExecuting, setIsExecuting] = useState(false);
 
   const totalProker = programKerjaList.length;
+  const totalDMs = decisionMakers.length || 4;
 
   const handleExecute = async () => {
     setIsExecuting(true);
@@ -74,7 +75,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-neutral-200 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors shadow-2xs cursor-pointer"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin' : ''}`} />
-            <span>Sinkronkan ({completedCount}/3)</span>
+            <span>Sinkronkan ({completedCount}/{totalDMs})</span>
           </button>
 
           {consensusResult && (
@@ -103,8 +104,8 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
         </div>
       )}
 
-      {/* 3 Decision Makers Status Cards (KafaBot card row style) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Decision Makers Status Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {decisionMakers.map((dm) => {
           const userVote = votes[dm.id];
           const isDone = Boolean(
@@ -119,30 +120,33 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
               key={dm.id}
               className="p-4 rounded-lg border border-neutral-200 bg-white shadow-2xs flex flex-col justify-between space-y-3"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center shrink-0">
                     {dm.isHighestRole ? <Crown className="w-3.5 h-3.5" /> : dm.name.charAt(0)}
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-xs font-bold text-neutral-900 flex items-center gap-1">
-                      <span>{dm.name}</span>
+                      <span className="truncate">{dm.name}</span>
                       {dm.id === currentUser.id && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-semibold shrink-0">
                           Anda
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-neutral-500">{dm.roleLabel}</div>
+                    <div className="text-[11px] text-neutral-500 truncate">{dm.roleLabel}</div>
+                    {dm.nim && (
+                      <div className="text-[10px] font-mono text-neutral-400">{dm.nim}</div>
+                    )}
                   </div>
                 </div>
 
                 {isDone ? (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                     SELESAI
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
                     MENUNGGU
                   </span>
                 )}
@@ -166,7 +170,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
             Pengesahan Konsensus Pengambilan Keputusan (Metode Borda)
           </h3>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Eksekusi konsensus hanya terbuka setelah 3/3 pengambil keputusan selesai menilai dan hanya dapat disahkan melalui akun Ketua Umum (jabatan tertinggi).
+            Eksekusi konsensus hanya terbuka setelah {totalDMs}/{totalDMs} pengambil keputusan selesai menilai dan hanya dapat disahkan melalui akun Ketua Umum (jabatan tertinggi).
           </p>
         </div>
 
@@ -188,8 +192,8 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
                   {consensusResult
                     ? 'Konsensus sudah disahkan oleh Ketua. Lihat hasil pada menu Hasil & Berita Acara.'
                     : isConsensusReady
-                    ? 'Penilaian 3/3 sudah lengkap. Menunggu Ketua melakukan pengesahan.'
-                    : `Menunggu kelengkapan penilaian (${completedCount}/3 selesai).`}
+                    ? `Penilaian ${totalDMs}/${totalDMs} sudah lengkap. Menunggu Ketua melakukan pengesahan.`
+                    : `Menunggu kelengkapan penilaian (${completedCount}/${totalDMs} selesai).`}
                 </strong>
               </p>
             </div>
@@ -201,8 +205,8 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
               Menunggu Seluruh Pengambil Keputusan Menyelesaikan Penilaian
             </h4>
             <p className="text-xs text-neutral-500 max-w-md mx-auto">
-              Tombol pengesahan di akun Ketua akan aktif otomatis setelah ketiga pengurus
-              mengirimkan penilaiannya ({completedCount}/3 selesai).
+              Tombol pengesahan di akun Ketua akan aktif otomatis setelah seluruh {totalDMs} pengurus
+              mengirimkan penilaiannya ({completedCount}/{totalDMs} selesai).
             </p>
           </div>
         ) : (
@@ -210,7 +214,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
             <CheckCircle2 className="w-7 h-7 text-emerald-600 mx-auto" />
             <div>
               <h4 className="font-bold text-neutral-900 text-sm">
-                Seluruh Penilaian Lengkap (3/3 Selesai)
+                Seluruh Penilaian Lengkap ({totalDMs}/{totalDMs} Selesai)
               </h4>
               <p className="text-xs text-neutral-600 mt-1">
                 Klik tombol di bawah ini untuk menghitung poin Borda dan mengesahkan prioritas

@@ -56,12 +56,16 @@ export async function POST(req: Request) {
 
     const n = prokers.length;
     const ketuaVotes = votes.filter((v) => v.decisionMakerId === 'dm-ketua');
+    const wakilVotes = votes.filter((v) => v.decisionMakerId === 'dm-wakil');
     const sekVotes = votes.filter((v) => v.decisionMakerId === 'dm-sekretaris');
     const bendVotes = votes.filter((v) => v.decisionMakerId === 'dm-bendahara');
 
     const calculatedRows = prokers.map((proker) => {
       const kRank = ketuaVotes.find((v) => v.prokerId === proker.id)?.rank ?? n;
       const kPoints = n - kRank + 1;
+
+      const wRank = wakilVotes.find((v) => v.prokerId === proker.id)?.rank ?? n;
+      const wPoints = n - wRank + 1;
 
       const sRank = sekVotes.find((v) => v.prokerId === proker.id)?.rank ?? n;
       const sPoints = n - sRank + 1;
@@ -73,11 +77,13 @@ export async function POST(req: Request) {
         prokerId: proker.id,
         ketuaRank: kRank,
         ketuaPoints: kPoints,
+        wakilRank: wRank,
+        wakilPoints: wPoints,
         sekretarisRank: sRank,
         sekretarisPoints: sPoints,
         bendaharaRank: bRank,
         bendaharaPoints: bPoints,
-        totalBordaPoints: kPoints + sPoints + bPoints,
+        totalBordaPoints: kPoints + wPoints + sPoints + bPoints,
         finalRank: 0,
         statusRecommendation: 'Prioritas Kedua',
       };

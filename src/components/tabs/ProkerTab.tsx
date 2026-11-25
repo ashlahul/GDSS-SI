@@ -213,7 +213,7 @@ export const ProkerTab: React.FC = () => {
         <div className="p-4 rounded-lg border border-neutral-200 bg-white shadow-2xs flex flex-col justify-center">
           <span className="text-[11px] text-neutral-500 font-medium">Penilai Selesai</span>
           <span className="text-xl font-bold text-neutral-900 mt-1 tabular-nums">
-            {completedCount}/3
+            {completedCount}/{decisionMakers.length || 4}
           </span>
         </div>
 

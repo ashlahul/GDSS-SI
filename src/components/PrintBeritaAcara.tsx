@@ -13,6 +13,7 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
   decisionMakers,
 }) => {
   const ketua = decisionMakers.find((d) => d.role === 'KETUA');
+  const wakil = decisionMakers.find((d) => d.role === 'WAKIL_KETUA');
   const sekretaris = decisionMakers.find((d) => d.role === 'SEKRETARIS');
   const bendahara = decisionMakers.find((d) => d.role === 'BENDAHARA');
 
@@ -72,8 +73,9 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
         secara kolektif menggunakan Sistem Pendukung Keputusan Kelompok (GDSS) berbasis website dengan
         metode perhitungan peringkat preferensial <strong>Metode Borda (Borda Count)</strong>.
         Penilaian telah diberikan secara independen oleh seluruh pengambil keputusan (Decision Maker),
-        yaitu Ketua, Sekretaris, dan Bendahara, dan telah disahkan secara resmi melalui akun
-        jabatan tertinggi oleh <strong>{consensusResult.authorizedBy} (Ketua Umum)</strong>.
+        yaitu Ketua Umum, Wakil Ketua Umum, Sekretaris Jenderal, dan Bendahara Umum, dan telah
+        disahkan secara resmi melalui akun jabatan tertinggi oleh{' '}
+        <strong>{consensusResult.authorizedBy} (Ketua Umum)</strong>.
       </p>
 
       {/* Tabel Hasil Konsensus */}
@@ -84,6 +86,7 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
             <th className="border border-black p-2 text-left">Kode & Nama Program Kerja</th>
             <th className="border border-black p-2 text-right">Est. Anggaran</th>
             <th className="border border-black p-2 text-center">Ketua</th>
+            <th className="border border-black p-2 text-center">Wakil Ketua</th>
             <th className="border border-black p-2 text-center">Sekretaris</th>
             <th className="border border-black p-2 text-center">Bendahara</th>
             <th className="border border-black p-2 text-center">Total Poin</th>
@@ -106,6 +109,9 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
               </td>
               <td className="border border-black p-2 text-center">
                 Rank {row.ketuaRank} ({row.ketuaPoints})
+              </td>
+              <td className="border border-black p-2 text-center">
+                Rank {row.wakilRank} ({row.wakilPoints})
               </td>
               <td className="border border-black p-2 text-center">
                 Rank {row.sekretarisRank} ({row.sekretarisPoints})
@@ -132,23 +138,7 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
       </p>
 
       {/* Tanda Tangan */}
-      <div className="grid grid-cols-3 gap-6 text-center text-xs mt-12">
-        <div>
-          <p className="mb-16">
-            Pengambil Keputusan II,
-            <br />
-            <strong>Sekretaris Jenderal</strong>
-          </p>
-          <p className="font-bold underline">{sekretaris?.name}</p>
-        </div>
-        <div>
-          <p className="mb-16">
-            Pengambil Keputusan III,
-            <br />
-            <strong>Bendahara Umum</strong>
-          </p>
-          <p className="font-bold underline">{bendahara?.name}</p>
-        </div>
+      <div className="grid grid-cols-4 gap-4 text-center text-xs mt-12">
         <div>
           <p className="mb-16">
             Pengambil Keputusan I (Tertinggi),
@@ -156,6 +146,34 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
             <strong>Ketua Umum</strong>
           </p>
           <p className="font-bold underline">{ketua?.name}</p>
+          {ketua?.nim && <p className="text-[11px] font-mono mt-0.5">NIM. {ketua.nim}</p>}
+        </div>
+        <div>
+          <p className="mb-16">
+            Pengambil Keputusan II,
+            <br />
+            <strong>Wakil Ketua Umum</strong>
+          </p>
+          <p className="font-bold underline">{wakil?.name}</p>
+          {wakil?.nim && <p className="text-[11px] font-mono mt-0.5">NIM. {wakil.nim}</p>}
+        </div>
+        <div>
+          <p className="mb-16">
+            Pengambil Keputusan III,
+            <br />
+            <strong>Sekretaris Jenderal</strong>
+          </p>
+          <p className="font-bold underline">{sekretaris?.name}</p>
+          {sekretaris?.nim && <p className="text-[11px] font-mono mt-0.5">NIM. {sekretaris.nim}</p>}
+        </div>
+        <div>
+          <p className="mb-16">
+            Pengambil Keputusan IV,
+            <br />
+            <strong>Bendahara Umum</strong>
+          </p>
+          <p className="font-bold underline">{bendahara?.name}</p>
+          {bendahara?.nim && <p className="text-[11px] font-mono mt-0.5">NIM. {bendahara.nim}</p>}
         </div>
       </div>
     </div>

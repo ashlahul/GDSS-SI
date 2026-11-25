@@ -6,10 +6,11 @@ Website **Group Decision Support System (GDSS)** untuk penentuan prioritas progr
 
 ## Fitur Utama Sesuai Ketentuan Tugas UAS
 
-1. **Multi-Account Login & Role Switcher (3 Decision Maker):**
-   - **Ketua Umum** (`ketua@ormawa.ac.id` / `ketua123`) — *Jabatan Tertinggi*
-   - **Sekretaris Jenderal** (`sekretaris@ormawa.ac.id` / `sekretaris123`)
-   - **Bendahara Umum** (`bendahara@ormawa.ac.id` / `bendahara123`)
+1. **Multi-Account Login (4 Decision Maker):**
+   - **Ketua Umum** — Ashlahul Umam (`240605110008`, `ketua@ormawa.ac.id` / `ketua123`) — *Jabatan Tertinggi*
+   - **Wakil Ketua Umum** — Zakka Yogaraksa (`240605110009`, `wakil@ormawa.ac.id` / `wakil123`)
+   - **Sekretaris Jenderal** — Muhammad Akmalul Fikri (`240605110147`, `sekretaris@ormawa.ac.id` / `sekretaris123`)
+   - **Bendahara Umum** — Ega Fikri Prayoga (`240605110151`, `bendahara@ormawa.ac.id` / `bendahara123`)
 
 2. **Database PostgreSQL + Prisma ORM (Multi-Device Sync):**
    - Seluruh data (`DecisionMaker`, `ProgramKerja`, `Vote`, `ConsensusRecord`, `ConsensusDetail`) tersimpan di PostgreSQL.
@@ -17,7 +18,7 @@ Website **Group Decision Support System (GDSS)** untuk penentuan prioritas progr
 
 3. **Penilaian Preferensi Individu & Konsensus Borda:**
    - Setiap pengambil keputusan menyusun urutan prioritas alternatif dari peringkat 1 hingga $N$.
-   - Tombol **"Hitung & Sahkan Konsensus (Metode Borda)"** hanya terbuka setelah ketiga DM selesai menilai, dan hanya dapat dieksekusi oleh akun **Ketua Umum**.
+   - Tombol **"Hitung & Sahkan Konsensus (Metode Borda)"** hanya terbuka setelah keempat DM selesai menilai, dan hanya dapat dieksekusi oleh akun **Ketua Umum**.
 
 4. **Transparansi Hasil & Cetak Berita Acara:**
    - Semua akun dapat melihat podium prioritas, grafik skor, matriks transparansi perhitungan, dan mencetak Berita Acara PDF resmi.

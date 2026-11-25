@@ -10,6 +10,7 @@ datasource db {
 
 enum RoleType {
   KETUA
+  WAKIL_KETUA
   SEKRETARIS
   BENDAHARA
 }
@@ -17,6 +18,7 @@ enum RoleType {
 model DecisionMaker {
   id               String            @id
   name             String
+  nim              String            @default("")
   email            String            @unique
   password         String
   role             RoleType          @unique
@@ -68,6 +70,8 @@ model ConsensusDetail {
   prokerId             String
   ketuaRank            Int
   ketuaPoints          Int
+  wakilRank            Int             @default(0)
+  wakilPoints          Int             @default(0)
   sekretarisRank       Int
   sekretarisPoints     Int
   bendaharaRank        Int
