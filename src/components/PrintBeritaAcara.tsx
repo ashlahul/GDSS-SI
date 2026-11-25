@@ -36,16 +36,24 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
   return (
     <div id="print-berita-acara" className="hidden print:block bg-white text-black p-8 max-w-4xl mx-auto text-sm leading-relaxed">
       {/* Kop Surat */}
-      <div className="border-b-4 border-black pb-4 mb-6 text-center">
-        <h1 className="text-lg font-bold uppercase tracking-wide">
-          PENGURUS HARIAN ORGANISASI MAHASISWA (ORMAWA)
-        </h1>
-        <h2 className="text-base font-bold uppercase">
-          SISTEM PENDUKUNG KEPUTUSAN KELOMPOK (GDSS) PENENTUAN PRIORITAS PROGRAM KERJA
-        </h2>
-        <p className="text-xs mt-1">
-          Dokumen Konsensus Resmi Pengambilan Keputusan • Metode Voting Borda Count
-        </p>
+      <div className="border-b-4 border-black pb-4 mb-6 flex items-center gap-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt="Logo GDSS Ormawa"
+          className="w-16 h-16 object-contain shrink-0"
+        />
+        <div className="flex-1 text-center pr-16">
+          <h1 className="text-lg font-bold uppercase tracking-wide">
+            PENGURUS HARIAN ORGANISASI MAHASISWA (ORMAWA)
+          </h1>
+          <h2 className="text-base font-bold uppercase">
+            SISTEM PENDUKUNG KEPUTUSAN KELOMPOK (GDSS) PENENTUAN PRIORITAS PROGRAM KERJA
+          </h2>
+          <p className="text-xs mt-1">
+            Dokumen Konsensus Resmi Pengambilan Keputusan • Metode Voting Borda Count
+          </p>
+        </div>
       </div>
 
       {/* Judul Dokumen */}

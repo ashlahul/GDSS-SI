@@ -28,8 +28,13 @@ export const LoginView: React.FC = () => {
       <div className="w-full max-w-md rounded-2xl shadow-2xl bg-[#1a1b20] border border-[#272832] text-white overflow-hidden">
         {/* Card Header */}
         <div className="p-6 pb-4 text-center space-y-2">
-          <div className="mx-auto w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-600/30 mb-2">
-            G
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-white p-1.5 flex items-center justify-center shadow-lg shadow-black/25 border border-white/10 mb-2 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="Logo GDSS Ormawa"
+              className="w-full h-full object-contain select-none"
+            />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-white">
             Login Dashboard GDSS

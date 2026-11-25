@@ -319,6 +319,14 @@ export const AppShell: React.FC<AppShellProps> = ({
           >
             <Menu className="w-4 h-4" />
           </button>
+          <div className="w-6 h-6 rounded-full overflow-hidden bg-white border border-neutral-200 flex items-center justify-center p-0.5 shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="Logo GDSS Ormawa"
+              className="w-full h-full object-contain select-none"
+            />
+          </div>
           <span className="font-bold text-sm text-neutral-900">GDSS Ormawa</span>
           <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-purple-100/70 text-purple-700 border border-purple-200/50">
             Borda
@@ -350,8 +358,13 @@ export const AppShell: React.FC<AppShellProps> = ({
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-neutral-100 mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center">
-                    <Scale className="w-3.5 h-3.5" />
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-white border border-neutral-200 flex items-center justify-center p-0.5 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/logo.png"
+                      alt="Logo GDSS Ormawa"
+                      className="w-full h-full object-contain select-none"
+                    />
                   </div>
                   <span className="font-bold text-sm text-neutral-900">GDSS Ormawa</span>
                 </div>
@@ -472,8 +485,13 @@ export const AppShell: React.FC<AppShellProps> = ({
                   isCollapsed ? 'justify-center' : ''
                 }`}
               >
-                <div className="w-8 h-8 rounded-full bg-white/95 border border-neutral-200/80 shadow-xs ring-1 ring-white/90 group-hover:scale-105 group-hover:shadow-md group-hover:border-purple-300 transition-all duration-200 shrink-0 flex items-center justify-center">
-                  <Scale className="w-4 h-4 text-purple-600" />
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-white/95 border border-neutral-200/80 shadow-xs ring-1 ring-white/90 group-hover:scale-105 group-hover:shadow-md group-hover:border-purple-300 transition-all duration-200 shrink-0 flex items-center justify-center p-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/logo.png"
+                    alt="Logo GDSS Ormawa"
+                    className="w-full h-full object-contain select-none"
+                  />
                 </div>
                 {!isCollapsed && (
                   <div className="flex flex-col min-w-0 text-left">
