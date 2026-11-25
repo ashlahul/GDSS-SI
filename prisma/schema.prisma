@@ -26,6 +26,7 @@ model DecisionMaker {
   role             RoleType
   roleLabel        String
   isHighestRole    Boolean           @default(false)
+  isActive         Boolean           @default(true)
   avatarColor      String
   votes            Vote[]
   consensusRecords ConsensusRecord[]

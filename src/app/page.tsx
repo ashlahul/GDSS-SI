@@ -21,6 +21,7 @@ export default function Home() {
     isLoadingData,
     dbError,
     refreshData,
+    logout,
   } = useGDSS();
   const [activeTab, setActiveTab] = useState<string>('overview');
 
@@ -39,6 +40,31 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return <LoginView />;
+  }
+
+  if (!currentUser.isActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f6f7f9] p-4">
+        <div className="max-w-md w-full rounded-xl bg-white border border-neutral-200 p-6 text-center space-y-4 shadow-sm">
+          <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto" />
+          <div className="space-y-1">
+            <h2 className="text-base font-bold text-neutral-900">
+              Akun Anda Berstatus Nonaktif
+            </h2>
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Akun <strong>{currentUser.name}</strong> telah dinonaktifkan oleh Administrator. Data penilaian yang pernah Anda simpan tetap aman di sistem.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold cursor-pointer"
+          >
+            Kembali ke Halaman Login
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const effectiveTab =

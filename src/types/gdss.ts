@@ -14,6 +14,7 @@ export interface DecisionMaker {
   role: RoleType;
   roleLabel: string;
   isHighestRole: boolean;
+  isActive: boolean;
   avatarColor: string;
 }
 

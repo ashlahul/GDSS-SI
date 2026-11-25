@@ -26,6 +26,7 @@ export const FALLBACK_ADMIN: DecisionMaker = {
   role: 'ADMIN',
   roleLabel: 'Administrator Sistem',
   isHighestRole: false,
+  isActive: true,
   avatarColor: 'bg-neutral-800',
 };
 
@@ -38,6 +39,7 @@ export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
     role: 'KETUA',
     roleLabel: 'Ketua Umum',
     isHighestRole: true,
+    isActive: true,
     avatarColor: 'bg-amber-600',
   },
   {
@@ -48,6 +50,7 @@ export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
     role: 'WAKIL_KETUA',
     roleLabel: 'Wakil Ketua Umum',
     isHighestRole: false,
+    isActive: true,
     avatarColor: 'bg-purple-600',
   },
   {
@@ -58,6 +61,7 @@ export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
     role: 'SEKRETARIS',
     roleLabel: 'Sekretaris Jenderal',
     isHighestRole: false,
+    isActive: true,
     avatarColor: 'bg-emerald-600',
   },
   {
@@ -68,6 +72,7 @@ export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
     role: 'BENDAHARA',
     roleLabel: 'Bendahara Umum',
     isHighestRole: false,
+    isActive: true,
     avatarColor: 'bg-blue-600',
   },
 ];
@@ -79,6 +84,7 @@ export interface MemberInputPayload {
   password?: string;
   role: RoleType;
   roleLabel: string;
+  isActive?: boolean;
 }
 
 interface GDSSContextType {
@@ -338,10 +344,13 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       const data = await res.json();
       if (!res.ok) {
-        return { success: false, message: data.error || 'Gagal menghapus anggota.' };
+        return { success: false, message: data.error || 'Gagal menonaktifkan anggota.' };
       }
       applyServerState(data);
-      return { success: true, message: 'Anggota berhasil dihapus.' };
+      return {
+        success: true,
+        message: 'Anggota berhasil dinonaktifkan. Data sebelumnya tetap tersimpan.',
+      };
     } catch {
       return { success: false, message: 'Gagal terhubung ke server.' };
     }

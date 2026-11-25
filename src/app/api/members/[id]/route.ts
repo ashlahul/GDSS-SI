@@ -37,7 +37,7 @@ export async function PATCH(
     await ensureSeeded();
     const { id } = await context.params;
     const body = await req.json();
-    const { actorId, name, nim, email, password, role, roleLabel } = body as {
+    const { actorId, name, nim, email, password, role, roleLabel, isActive } = body as {
       actorId?: string;
       name?: string;
       nim?: string;
@@ -45,6 +45,7 @@ export async function PATCH(
       password?: string;
       role?: RoleType;
       roleLabel?: string;
+      isActive?: boolean;
     };
 
     const actor = actorId
@@ -116,7 +117,7 @@ export async function PATCH(
 
     if (target.role !== 'KETUA' && nextRole === 'KETUA') {
       const otherKetua = await prisma.decisionMaker.findFirst({
-        where: { id: { not: id }, role: 'KETUA' },
+        where: { id: { not: id }, role: 'KETUA', isActive: true },
         select: { name: true },
       });
       if (otherKetua) {
@@ -129,6 +130,30 @@ export async function PATCH(
       }
     }
 
+    let nextIsActive = target.isActive;
+    if (typeof isActive === 'boolean') {
+      if (target.role === 'ADMIN' || target.role === 'KETUA' || target.isHighestRole) {
+        if (!isActive) {
+          return NextResponse.json(
+            { error: 'Akun Administrator dan Ketua Umum harus tetap aktif.' },
+            { status: 400 }
+          );
+        }
+      }
+      if (target.isActive && !isActive) {
+        const activeVoterCount = await prisma.decisionMaker.count({
+          where: { role: { not: 'ADMIN' }, isActive: true },
+        });
+        if (activeVoterCount <= 2) {
+          return NextResponse.json(
+            { error: 'Minimal harus terdapat 2 Decision Maker aktif dalam sistem GDSS.' },
+            { status: 400 }
+          );
+        }
+      }
+      nextIsActive = isActive;
+    }
+
     const nextRoleLabel =
       roleLabel !== undefined
         ? String(roleLabel).trim() || DEFAULT_ROLE_LABELS[nextRole]
@@ -136,27 +161,22 @@ export async function PATCH(
         ? DEFAULT_ROLE_LABELS[nextRole]
         : target.roleLabel;
 
-    const roleOrIdentityChanged =
-      target.role !== nextRole || target.name !== cleanName || target.nim !== cleanNim;
-
-    await prisma.$transaction([
-      prisma.decisionMaker.update({
-        where: { id },
-        data: {
-          name: cleanName,
-          nim: cleanNim,
-          email: cleanEmail,
-          role: nextRole,
-          roleLabel: nextRoleLabel,
-          isHighestRole: nextRole === 'KETUA',
-          avatarColor: AVATAR_COLOR_BY_ROLE[nextRole],
-          ...(password && password.trim().length >= 6
-            ? { password: password.trim() }
-            : {}),
-        },
-      }),
-      ...(roleOrIdentityChanged ? [prisma.consensusRecord.deleteMany({})] : []),
-    ]);
+    await prisma.decisionMaker.update({
+      where: { id },
+      data: {
+        name: cleanName,
+        nim: cleanNim,
+        email: cleanEmail,
+        role: nextRole,
+        roleLabel: nextRoleLabel,
+        isHighestRole: nextRole === 'KETUA',
+        isActive: nextIsActive,
+        avatarColor: AVATAR_COLOR_BY_ROLE[nextRole],
+        ...(password && password.trim().length >= 6
+          ? { password: password.trim() }
+          : {}),
+      },
+    });
 
     const state = await getFullGDSSState();
     return NextResponse.json(state);
@@ -185,7 +205,7 @@ export async function DELETE(
 
     if (!actor || actor.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Akses ditolak: hanya Administrator yang dapat menghapus anggota.' },
+        { error: 'Akses ditolak: hanya Administrator yang dapat menonaktifkan anggota.' },
         { status: 403 }
       );
     }
@@ -200,7 +220,7 @@ export async function DELETE(
 
     if (target.role === 'ADMIN') {
       return NextResponse.json(
-        { error: 'Akun Administrator tidak dapat dihapus.' },
+        { error: 'Akun Administrator tidak dapat dinonaktifkan.' },
         { status: 400 }
       );
     }
@@ -209,33 +229,39 @@ export async function DELETE(
       return NextResponse.json(
         {
           error:
-            'Akun Ketua Umum tidak dapat dihapus karena diperlukan sebagai pengesah konsensus.',
+            'Akun Ketua Umum tidak dapat dinonaktifkan karena diperlukan sebagai pengesah konsensus.',
         },
         { status: 400 }
       );
     }
 
-    const voterCount = await prisma.decisionMaker.count({
-      where: { role: { not: 'ADMIN' } },
+    if (!target.isActive) {
+      const state = await getFullGDSSState();
+      return NextResponse.json(state);
+    }
+
+    const activeVoterCount = await prisma.decisionMaker.count({
+      where: { role: { not: 'ADMIN' }, isActive: true },
     });
-    if (voterCount <= 2) {
+    if (activeVoterCount <= 2) {
       return NextResponse.json(
-        { error: 'Minimal harus terdapat 2 Decision Maker penilai dalam sistem GDSS.' },
+        { error: 'Minimal harus terdapat 2 Decision Maker aktif dalam sistem GDSS.' },
         { status: 400 }
       );
     }
 
-    await prisma.$transaction([
-      prisma.decisionMaker.delete({ where: { id } }),
-      prisma.consensusRecord.deleteMany({}),
-    ]);
+    // Soft-delete: set isActive = false without deleting Vote or Consensus history
+    await prisma.decisionMaker.update({
+      where: { id },
+      data: { isActive: false },
+    });
 
     const state = await getFullGDSSState();
     return NextResponse.json(state);
   } catch (error) {
     console.error('DELETE /api/members/[id] error:', error);
     return NextResponse.json(
-      { error: 'Gagal menghapus anggota.' },
+      { error: 'Gagal menonaktifkan anggota.' },
       { status: 500 }
     );
   }

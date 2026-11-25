@@ -7,7 +7,8 @@ import {
   Users,
   Plus,
   Pencil,
-  Trash2,
+  UserX,
+  UserCheck,
   Search,
   Crown,
   ShieldCheck,
@@ -16,6 +17,7 @@ import {
   X,
   RotateCw,
   AlertCircle,
+  Archive,
 } from 'lucide-react';
 
 const ROLE_OPTIONS: { value: RoleType; label: string; defaultTitle: string }[] = [
@@ -42,8 +44,11 @@ export const MembersTab: React.FC = () => {
   } = useGDSS();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<DecisionMaker | null>(null);
+  const [confirmMember, setConfirmMember] = useState<DecisionMaker | null>(null);
+  const [isDeactivating, setIsDeactivating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
@@ -74,21 +79,31 @@ export const MembersTab: React.FC = () => {
     );
   }
 
+  const allVoters = accounts.filter((a) => a.role !== 'ADMIN');
+  const activeVoters = allVoters.filter((a) => a.isActive);
+  const inactiveVoters = allVoters.filter((a) => !a.isActive);
+  const adminAccount = accounts.find((a) => a.role === 'ADMIN');
+
   const totalProker = programKerjaList.length;
   const completedCount = decisionMakers.filter((dm) => {
     const v = votes[dm.id];
     return v && v.submittedAt && v.rankings.length === totalProker && totalProker > 0;
   }).length;
-  const ketua = decisionMakers.find((d) => d.role === 'KETUA');
-  const adminAccount = accounts.find((a) => a.role === 'ADMIN');
 
-  const filteredMembers = decisionMakers.filter(
-    (dm) =>
-      dm.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dm.nim.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dm.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dm.roleLabel.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMembers = allVoters
+    .filter((dm) => {
+      if (statusFilter === 'active') return dm.isActive;
+      if (statusFilter === 'inactive') return !dm.isActive;
+      return true;
+    })
+    .filter(
+      (dm) =>
+        dm.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        dm.nim.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        dm.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        dm.roleLabel.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => Number(b.isActive) - Number(a.isActive));
 
   const openAddModal = () => {
     setEditingMember(null);
@@ -154,29 +169,46 @@ export const MembersTab: React.FC = () => {
       setIsModalOpen(false);
       setFeedback({
         type: 'success',
-        text: `Anggota baru "${formData.name}" berhasil ditambahkan ke sistem.`,
+        text: `Anggota baru "${formData.name}" berhasil ditambahkan.`,
       });
     }
   };
 
-  const handleDelete = async (member: DecisionMaker) => {
-    if (
-      !confirm(
-        `Hapus anggota "${member.name}" (${member.roleLabel})? Penilaian TOPSIS yang sudah dikirim anggota ini akan ikut dihapus.`
-      )
-    ) {
-      return;
-    }
-    const res = await deleteMember(member.id);
+  const handleDeactivate = (member: DecisionMaker) => {
+    setConfirmMember(member);
+  };
+
+  const confirmDeactivate = async () => {
+    if (!confirmMember) return;
+    const target = confirmMember;
+    setIsDeactivating(true);
+    const res = await deleteMember(target.id);
+    setIsDeactivating(false);
+    setConfirmMember(null);
     if (!res.success) {
       setFeedback({
         type: 'error',
-        text: res.message || 'Gagal menghapus anggota.',
+        text: res.message || 'Gagal menonaktifkan anggota.',
       });
     } else {
       setFeedback({
         type: 'success',
-        text: `Anggota "${member.name}" berhasil dihapus.`,
+        text: `Anggota "${target.name}" sekarang berstatus Nonaktif. Nama & riwayat datanya tetap tersimpan.`,
+      });
+    }
+  };
+
+  const handleReactivate = async (member: DecisionMaker) => {
+    const res = await updateMember(member.id, { isActive: true });
+    if (!res.success) {
+      setFeedback({
+        type: 'error',
+        text: res.message || 'Gagal mengaktifkan kembali anggota.',
+      });
+    } else {
+      setFeedback({
+        type: 'success',
+        text: `Anggota "${member.name}" berhasil diaktifkan kembali.`,
       });
     }
   };
@@ -192,7 +224,7 @@ export const MembersTab: React.FC = () => {
               Kelola Anggota
             </h1>
             <p className="text-xs text-neutral-500">
-              Tambah, edit profil/password, atau hapus anggota pengambil keputusan (Decision Maker).
+              Tambah, edit, atau nonaktifkan anggota tanpa menghapus riwayat penilaian yang sudah tersimpan.
             </p>
           </div>
         </div>
@@ -222,22 +254,22 @@ export const MembersTab: React.FC = () => {
       {/* KPI Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="p-4 rounded-lg border border-neutral-200 bg-white shadow-2xs">
-          <span className="text-[11px] text-neutral-500 font-medium">Total Penilai</span>
+          <span className="text-[11px] text-neutral-500 font-medium">Penilai Aktif</span>
           <div className="text-xl font-bold text-neutral-900 mt-1 tabular-nums">
-            {decisionMakers.length} Anggota
+            {activeVoters.length} Anggota
           </div>
         </div>
 
         <div className="p-4 rounded-lg border border-neutral-200 bg-white shadow-2xs">
-          <span className="text-[11px] text-neutral-500 font-medium">Ketua Umum</span>
-          <div className="text-sm font-bold text-purple-700 mt-1.5 truncate">
-            {ketua?.name || 'Belum ditetapkan'}
+          <span className="text-[11px] text-neutral-500 font-medium">Nonaktif (Arsip)</span>
+          <div className="text-xl font-bold text-neutral-500 mt-1 tabular-nums">
+            {inactiveVoters.length} Anggota
           </div>
         </div>
 
         <div className="p-4 rounded-lg border border-neutral-200 bg-white shadow-2xs">
-          <span className="text-[11px] text-neutral-500 font-medium">Suara Masuk</span>
-          <div className="text-xl font-bold text-neutral-900 mt-1 tabular-nums">
+          <span className="text-[11px] text-neutral-500 font-medium">Suara Aktif Masuk</span>
+          <div className="text-xl font-bold text-purple-700 mt-1 tabular-nums">
             {completedCount}/{decisionMakers.length}
           </div>
         </div>
@@ -276,16 +308,39 @@ export const MembersTab: React.FC = () => {
         </div>
       )}
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Cari nama, NIM, email, atau jabatan anggota..."
-          className="w-full pl-9 pr-4 py-2 rounded-lg border border-neutral-200 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-purple-400 bg-white shadow-2xs"
-        />
+      {/* Filter Tabs + Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-5 border-b border-neutral-200 text-xs font-medium">
+          {[
+            { id: 'all' as const, label: `Semua (${allVoters.length})` },
+            { id: 'active' as const, label: `Aktif (${activeVoters.length})` },
+            { id: 'inactive' as const, label: `Nonaktif (${inactiveVoters.length})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setStatusFilter(tab.id)}
+              className={`pb-2 transition-colors cursor-pointer ${
+                statusFilter === tab.id
+                  ? 'text-purple-600 border-b-2 border-purple-600 font-semibold'
+                  : 'text-neutral-500 hover:text-neutral-900 border-b-2 border-transparent'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative sm:w-72">
+          <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari nama, NIM, atau email..."
+            className="w-full pl-9 pr-4 py-1.5 rounded-lg border border-neutral-200 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-purple-400 bg-white shadow-2xs"
+          />
+        </div>
       </div>
 
       {/* Members Table */}
@@ -296,23 +351,37 @@ export const MembersTab: React.FC = () => {
               <th className="py-2.5 px-4">Anggota & Email</th>
               <th className="py-2.5 px-3">NIM</th>
               <th className="py-2.5 px-3">Jabatan</th>
-              <th className="py-2.5 px-3">Otoritas</th>
-              <th className="py-2.5 px-3 text-center">Status Penilaian</th>
+              <th className="py-2.5 px-3 text-center">Status Akun</th>
+              <th className="py-2.5 px-3 text-center">Data Penilaian</th>
               <th className="py-2.5 px-4 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 text-neutral-700">
             {filteredMembers.map((dm) => {
               const v = votes[dm.id];
+              const savedCount = v?.rankings?.length || 0;
               const done = Boolean(
-                v && v.submittedAt && v.rankings.length === totalProker && totalProker > 0
+                v && v.submittedAt && savedCount === totalProker && totalProker > 0
               );
 
               return (
-                <tr key={dm.id} className="hover:bg-neutral-50/80 transition-colors">
+                <tr
+                  key={dm.id}
+                  className={`transition-colors ${
+                    dm.isActive
+                      ? 'hover:bg-neutral-50/80'
+                      : 'bg-neutral-50/60 text-neutral-400'
+                  }`}
+                >
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2.5">
-                      <span className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center shrink-0">
+                      <span
+                        className={`w-7 h-7 rounded-full font-bold text-xs flex items-center justify-center shrink-0 ${
+                          dm.isActive
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-neutral-200 text-neutral-500'
+                        }`}
+                      >
                         {dm.isHighestRole ? (
                           <Crown className="w-3.5 h-3.5" />
                         ) : (
@@ -320,37 +389,57 @@ export const MembersTab: React.FC = () => {
                         )}
                       </span>
                       <div>
-                        <div className="font-semibold text-neutral-900">{dm.name}</div>
+                        <div
+                          className={`font-semibold ${
+                            dm.isActive ? 'text-neutral-900' : 'text-neutral-500'
+                          }`}
+                        >
+                          {dm.name}
+                        </div>
                         <div className="text-[11px] text-neutral-400">{dm.email}</div>
                       </div>
                     </div>
                   </td>
 
-                  <td className="py-3 px-3 font-mono text-neutral-700">
+                  <td className="py-3 px-3 font-mono">
                     {dm.nim || '-'}
                   </td>
 
                   <td className="py-3 px-3">
-                    <span className="font-medium text-neutral-800">{dm.roleLabel}</span>
+                    <span
+                      className={`font-medium ${
+                        dm.isActive ? 'text-neutral-800' : 'text-neutral-500'
+                      }`}
+                    >
+                      {dm.roleLabel}
+                    </span>
                     <span className="block text-[10px] font-mono text-neutral-400">
                       {dm.role}
                     </span>
                   </td>
 
-                  <td className="py-3 px-3">
-                    {dm.isHighestRole ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 whitespace-nowrap">
-                        Pengesah Konsensus
+                  <td className="py-3 px-3 text-center">
+                    {dm.isActive ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        AKTIF
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-neutral-100 text-neutral-600 border border-neutral-200 whitespace-nowrap">
-                        Penilai / Voter
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-600 border border-neutral-200">
+                        <Archive className="w-3 h-3" /> NONAKTIF
                       </span>
                     )}
                   </td>
 
                   <td className="py-3 px-3 text-center">
-                    {done ? (
+                    {!dm.isActive ? (
+                      savedCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                          Tersimpan ({savedCount} data)
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400">Belum ada data</span>
+                      )
+                    ) : done ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <CheckCircle2 className="w-3 h-3" /> SELESAI
                       </span>
@@ -371,24 +460,45 @@ export const MembersTab: React.FC = () => {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        type="button"
-                        disabled={dm.isHighestRole || dm.role === 'KETUA'}
-                        onClick={() => handleDelete(dm)}
-                        className="p-1.5 rounded border border-neutral-200 bg-white hover:bg-rose-50 text-neutral-600 hover:text-rose-600 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
-                        title={
-                          dm.isHighestRole
-                            ? 'Akun Ketua Umum tidak dapat dihapus'
-                            : 'Hapus Anggota'
-                        }
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+
+                      {dm.isActive ? (
+                        <button
+                          type="button"
+                          disabled={dm.isHighestRole || dm.role === 'KETUA'}
+                          onClick={() => handleDeactivate(dm)}
+                          className="p-1.5 rounded border border-neutral-200 bg-white hover:bg-rose-50 text-neutral-600 hover:text-rose-600 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                          title={
+                            dm.isHighestRole
+                              ? 'Akun Ketua Umum tidak dapat dinonaktifkan'
+                              : 'Nonaktifkan Anggota (data tetap tersimpan)'
+                          }
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleReactivate(dm)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-semibold transition cursor-pointer"
+                          title="Aktifkan Kembali Anggota"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Aktifkan</span>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
               );
             })}
+
+            {filteredMembers.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-xs text-neutral-400">
+                  Tidak ada anggota pada filter atau pencarian ini.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -402,10 +512,11 @@ export const MembersTab: React.FC = () => {
             </div>
             <div>
               <div className="font-bold text-neutral-900">
-                {adminAccount.name} <span className="text-[10px] font-mono text-neutral-400 ml-1">(ADMIN)</span>
+                {adminAccount.name}{' '}
+                <span className="text-[10px] font-mono text-neutral-400 ml-1">(ADMIN)</span>
               </div>
               <div className="text-[11px] text-neutral-500">
-                {adminAccount.email} • Akun ini khusus mengelola daftar anggota & tidak ikut voting.
+                {adminAccount.email} • Menonaktifkan anggota hanya mengarsipkan aksesnya tanpa menghapus riwayat penilaian di database.
               </div>
             </div>
           </div>
@@ -561,6 +672,62 @@ export const MembersTab: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Confirmation Popup Modal for Deactivating Member */}
+      {confirmMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-xl bg-white border border-neutral-200 shadow-xl overflow-hidden animate-fadeIn">
+            <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
+                  <UserX className="w-3.5 h-3.5" />
+                </span>
+                <h3 className="text-sm font-bold text-neutral-900">
+                  Nonaktifkan Anggota?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isDeactivating && setConfirmMember(null)}
+                className="p-1 rounded hover:bg-neutral-100 text-neutral-400 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3 text-xs text-neutral-600 leading-relaxed">
+              <p>
+                Apakah Anda yakin ingin menonaktifkan{' '}
+                <strong className="text-neutral-900">{confirmMember.name}</strong> (
+                {confirmMember.roleLabel})?
+              </p>
+              <div className="p-3 rounded-lg bg-[#f9fafb] border border-neutral-200 text-[11px] text-neutral-600">
+                Nama anggota <strong>tidak akan dihapus permanen</strong> dan seluruh data
+                penilaian yang pernah disimpan tetap aman di database. Statusnya berubah menjadi{' '}
+                <strong>Nonaktif</strong> (bisa diaktifkan kembali kapan saja).
+              </div>
+            </div>
+
+            <div className="px-5 py-3.5 bg-[#f9fafb] border-t border-neutral-100 flex items-center justify-end gap-2 text-xs">
+              <button
+                type="button"
+                disabled={isDeactivating}
+                onClick={() => setConfirmMember(null)}
+                className="px-4 py-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 font-semibold hover:bg-neutral-50 cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeactivating}
+                onClick={confirmDeactivate}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-semibold cursor-pointer"
+              >
+                {isDeactivating ? 'Memproses...' : 'Ya, Nonaktifkan'}
+              </button>
+            </div>
           </div>
         </div>
       )}

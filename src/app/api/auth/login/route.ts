@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, withDbRetry } from '@/lib/prisma';
 import { ensureSeeded } from '@/lib/gdss-server';
 
 export async function POST(req: Request) {
   try {
-    await ensureSeeded();
+    await withDbRetry(() => ensureSeeded());
     const body = await req.json();
     const { email, password } = body;
 
@@ -33,6 +33,17 @@ export async function POST(req: Request) {
             'Email atau kata sandi tidak sesuai dengan akun Decision Maker terdaftar.',
         },
         { status: 401 }
+      );
+    }
+
+    if (!user.isActive) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            'Akun Anda telah dinonaktifkan oleh Administrator dan tidak dapat mengakses sistem.',
+        },
+        { status: 403 }
       );
     }
 

@@ -20,6 +20,7 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
 }) => {
   const {
     currentUser,
+    accounts,
     decisionMakers,
     programKerjaList,
     votes,
@@ -28,6 +29,14 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
     refreshData,
     isLoadingData,
   } = useGDSS();
+
+  const allVoterAccounts = useMemo(
+    () =>
+      accounts
+        .filter((a) => a.role !== 'ADMIN')
+        .sort((a, b) => Number(b.isActive) - Number(a.isActive)),
+    [accounts]
+  );
 
   const totalProker = programKerjaList.length;
 
@@ -351,16 +360,27 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 text-neutral-700">
-              {decisionMakers.map((dm) => {
+              {allVoterAccounts.map((dm) => {
                 const v = votes[dm.id];
                 const done = Boolean(
                   v && v.submittedAt && v.rankings.length === totalProker && totalProker > 0
                 );
                 return (
-                  <tr key={dm.id} className="hover:bg-neutral-50/70 transition-colors">
+                  <tr
+                    key={dm.id}
+                    className={`transition-colors ${
+                      dm.isActive ? 'hover:bg-neutral-50/70' : 'bg-neutral-50/60 text-neutral-400'
+                    }`}
+                  >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-neutral-900">{dm.name}</span>
+                        <span
+                          className={`font-semibold ${
+                            dm.isActive ? 'text-neutral-900' : 'text-neutral-500'
+                          }`}
+                        >
+                          {dm.name}
+                        </span>
                         {dm.isHighestRole && (
                           <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                         )}
@@ -371,7 +391,11 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
                     </td>
                     <td className="py-3 px-3 text-neutral-600">{dm.roleLabel}</td>
                     <td className="py-3 px-4 text-right">
-                      {done ? (
+                      {!dm.isActive ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-500 border border-neutral-200">
+                          NONAKTIF
+                        </span>
+                      ) : done ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <CheckCircle2 className="w-3 h-3" /> SELESAI
                         </span>

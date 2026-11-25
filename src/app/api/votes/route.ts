@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     const dm = await prisma.decisionMaker.findUnique({
       where: { id: userId },
-      select: { id: true, role: true },
+      select: { id: true, role: true, isActive: true },
     });
     if (!dm) {
       return NextResponse.json(
@@ -31,6 +31,12 @@ export async function POST(req: Request) {
     if (dm.role === 'ADMIN') {
       return NextResponse.json(
         { error: 'Akun Administrator hanya mengelola anggota dan tidak ikut memberikan suara.' },
+        { status: 403 }
+      );
+    }
+    if (!dm.isActive) {
+      return NextResponse.json(
+        { error: 'Akun Anda berstatus nonaktif dan tidak dapat mengirim penilaian.' },
         { status: 403 }
       );
     }

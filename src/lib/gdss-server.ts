@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma, withDbRetry } from '@/lib/prisma';
 import {
   DecisionMaker,
   ProgramKerja,
@@ -18,6 +18,7 @@ export const SEED_ADMIN: DecisionMaker & { password: string } = {
   role: 'ADMIN',
   roleLabel: 'Administrator Sistem',
   isHighestRole: false,
+  isActive: true,
   avatarColor: 'bg-neutral-800',
 };
 
@@ -31,6 +32,7 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     role: 'KETUA',
     roleLabel: 'Ketua Umum (Jabatan Tertinggi)',
     isHighestRole: true,
+    isActive: true,
     avatarColor: 'bg-amber-600',
   },
   {
@@ -42,6 +44,7 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     role: 'WAKIL_KETUA',
     roleLabel: 'Wakil Ketua Umum',
     isHighestRole: false,
+    isActive: true,
     avatarColor: 'bg-purple-600',
   },
   {
@@ -53,6 +56,7 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     role: 'SEKRETARIS',
     roleLabel: 'Sekretaris Jenderal',
     isHighestRole: false,
+    isActive: true,
     avatarColor: 'bg-emerald-600',
   },
   {
@@ -64,6 +68,7 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     role: 'BENDAHARA',
     roleLabel: 'Bendahara Umum',
     isHighestRole: false,
+    isActive: true,
     avatarColor: 'bg-blue-600',
   },
 ];
@@ -169,6 +174,7 @@ async function queryRawGDSSState() {
         role: true,
         roleLabel: true,
         isHighestRole: true,
+        isActive: true,
         avatarColor: true,
       },
     }),
@@ -193,13 +199,17 @@ async function queryRawGDSSState() {
 }
 
 export async function getFullGDSSState() {
-  let [dms, prokers, allVotes, latestConsensus] = await queryRawGDSSState();
+  let [dms, prokers, allVotes, latestConsensus] = await withDbRetry(() =>
+    queryRawGDSSState()
+  );
 
   const hasAdmin = dms.some((d) => d.role === 'ADMIN');
   const hasVoter = dms.some((d) => d.role !== 'ADMIN');
   if (!hasAdmin || !hasVoter || prokers.length === 0) {
-    await ensureSeeded();
-    [dms, prokers, allVotes, latestConsensus] = await queryRawGDSSState();
+    await withDbRetry(() => ensureSeeded());
+    [dms, prokers, allVotes, latestConsensus] = await withDbRetry(() =>
+      queryRawGDSSState()
+    );
   }
 
   const accounts: DecisionMaker[] = dms
@@ -211,6 +221,7 @@ export async function getFullGDSSState() {
       role: dm.role as RoleType,
       roleLabel: dm.roleLabel,
       isHighestRole: dm.isHighestRole,
+      isActive: dm.isActive,
       avatarColor: dm.avatarColor,
     }))
     .sort((a, b) => {
@@ -218,7 +229,7 @@ export async function getFullGDSSState() {
       return orderDiff !== 0 ? orderDiff : a.name.localeCompare(b.name);
     });
 
-  const decisionMakers = accounts.filter((a) => a.role !== 'ADMIN');
+  const decisionMakers = accounts.filter((a) => a.role !== 'ADMIN' && a.isActive);
 
   const programKerjaList: ProgramKerja[] = prokers.map((p) => ({
     id: p.id,
@@ -231,7 +242,7 @@ export async function getFullGDSSState() {
   }));
 
   const votes: Record<string, DecisionMakerVote> = {};
-  for (const dm of decisionMakers) {
+  for (const dm of accounts.filter((a) => a.role !== 'ADMIN')) {
     const userVotes = allVotes.filter((v) => v.decisionMakerId === dm.id);
     votes[dm.id] = {
       userId: dm.id,

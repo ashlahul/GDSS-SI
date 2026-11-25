@@ -17,6 +17,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
 }) => {
   const {
     currentUser,
+    accounts,
     decisionMakers,
     votes,
     programKerjaList,
@@ -27,6 +28,10 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
     refreshData,
     isLoadingData,
   } = useGDSS();
+
+  const allVoterAccounts = accounts
+    .filter((a) => a.role !== 'ADMIN')
+    .sort((a, b) => Number(b.isActive) - Number(a.isActive));
 
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
@@ -111,7 +116,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
 
       {/* Decision Makers Status Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {decisionMakers.map((dm) => {
+        {allVoterAccounts.map((dm) => {
           const userVote = votes[dm.id];
           const isDone = Boolean(
             userVote &&
@@ -123,11 +128,21 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
           return (
             <div
               key={dm.id}
-              className="p-4 rounded-lg border border-neutral-200 bg-white shadow-2xs flex flex-col justify-between space-y-3"
+              className={`p-4 rounded-lg border shadow-2xs flex flex-col justify-between space-y-3 ${
+                dm.isActive
+                  ? 'border-neutral-200 bg-white'
+                  : 'border-neutral-200 bg-neutral-50/70 opacity-75'
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center shrink-0">
+                  <span
+                    className={`w-7 h-7 rounded-full font-bold text-xs flex items-center justify-center shrink-0 ${
+                      dm.isActive
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-neutral-200 text-neutral-500'
+                    }`}
+                  >
                     {dm.isHighestRole ? <Crown className="w-3.5 h-3.5" /> : dm.name.charAt(0)}
                   </span>
                   <div className="min-w-0">
@@ -146,7 +161,11 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
                   </div>
                 </div>
 
-                {isDone ? (
+                {!dm.isActive ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-600 border border-neutral-200 shrink-0">
+                    NONAKTIF
+                  </span>
+                ) : isDone ? (
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                     SELESAI
                   </span>
@@ -157,7 +176,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
                 )}
               </div>
 
-              {isDone && (() => {
+              {dm.isActive && isDone && (() => {
                 const topPick = userVote.rankings.find((r) => r.rank === 1);
                 const topProker = programKerjaList.find((p) => p.id === topPick?.prokerId);
                 return topPick && topProker ? (
@@ -173,7 +192,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
               })()}
 
               <div className="pt-2.5 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-500">
-                <span>Progres Penilaian</span>
+                <span>{dm.isActive ? 'Progres Penilaian' : 'Arsip Penilaian'}</span>
                 <span className="font-mono font-semibold text-neutral-800">
                   {userVote?.rankings?.length || 0} / {totalProker} Proker
                 </span>

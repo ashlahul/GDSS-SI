@@ -14,12 +14,12 @@ export async function POST(req: Request) {
         })
       : null;
 
-    if (!executor || !executor.isHighestRole || executor.role === 'ADMIN') {
+    if (!executor || !executor.isHighestRole || executor.role === 'ADMIN' || !executor.isActive) {
       return NextResponse.json(
         {
           success: false,
           message:
-            'Akses Ditolak: Hanya pengambil keputusan dengan jabatan tertinggi (Ketua) yang berhak mengesahkan konsensus.',
+            'Akses Ditolak: Hanya pengambil keputusan aktif dengan jabatan tertinggi (Ketua) yang berhak mengesahkan konsensus.',
         },
         { status: 403 }
       );
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     ]);
 
     const voters = dms
-      .filter((d) => d.role !== 'ADMIN')
+      .filter((d) => d.role !== 'ADMIN' && d.isActive)
       .sort((a, b) => {
         const diff =
           (ROLE_ORDER[a.role as RoleType] ?? 50) -

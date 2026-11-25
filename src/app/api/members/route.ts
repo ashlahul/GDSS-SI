@@ -72,18 +72,22 @@ export async function POST(req: Request) {
 
     const existingEmail = await prisma.decisionMaker.findFirst({
       where: { email: { equals: cleanEmail, mode: 'insensitive' } },
-      select: { id: true },
+      select: { id: true, name: true, isActive: true },
     });
     if (existingEmail) {
       return NextResponse.json(
-        { error: 'Email tersebut sudah digunakan oleh anggota lain.' },
+        {
+          error: existingEmail.isActive
+            ? 'Email tersebut sudah digunakan oleh anggota lain.'
+            : `Email tersebut terdaftar pada anggota nonaktif (${existingEmail.name}). Aktifkan kembali anggota tersebut jika ingin memakainya.`,
+        },
         { status: 409 }
       );
     }
 
     if (nextRole === 'KETUA') {
       const existingKetua = await prisma.decisionMaker.findFirst({
-        where: { role: 'KETUA' },
+        where: { role: 'KETUA', isActive: true },
         select: { name: true },
       });
       if (existingKetua) {
@@ -101,23 +105,20 @@ export async function POST(req: Request) {
 
     const newId = `dm-${crypto.randomUUID().slice(0, 8)}`;
 
-    await prisma.$transaction([
-      prisma.decisionMaker.create({
-        data: {
-          id: newId,
-          name: cleanName,
-          nim: cleanNim,
-          email: cleanEmail,
-          password: cleanPassword,
-          role: nextRole,
-          roleLabel: cleanRoleLabel,
-          isHighestRole: nextRole === 'KETUA',
-          avatarColor: AVATAR_COLOR_BY_ROLE[nextRole],
-        },
-      }),
-      // Clear previous consensus snapshot because total voting members changed
-      prisma.consensusRecord.deleteMany({}),
-    ]);
+    await prisma.decisionMaker.create({
+      data: {
+        id: newId,
+        name: cleanName,
+        nim: cleanNim,
+        email: cleanEmail,
+        password: cleanPassword,
+        role: nextRole,
+        roleLabel: cleanRoleLabel,
+        isHighestRole: nextRole === 'KETUA',
+        isActive: true,
+        avatarColor: AVATAR_COLOR_BY_ROLE[nextRole],
+      },
+    });
 
     const state = await getFullGDSSState();
     return NextResponse.json(state);

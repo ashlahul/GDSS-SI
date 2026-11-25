@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     if (action === 'simulate') {
       const [prokers, dms] = await Promise.all([
         prisma.programKerja.findMany({ orderBy: { code: 'asc' } }),
-        prisma.decisionMaker.findMany({ where: { role: { not: 'ADMIN' } } }),
+        prisma.decisionMaker.findMany({ where: { role: { not: 'ADMIN' }, isActive: true } }),
       ]);
 
       if (prokers.length === 0 || dms.length === 0) {

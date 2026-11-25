@@ -7,7 +7,7 @@ Website **Group Decision Support System (GDSS)** untuk penentuan prioritas progr
 ## Fitur Utama Sesuai Ketentuan Tugas UAS
 
 1. **Multi-Account Login (Administrator + Decision Makers):**
-   - **Administrator Sistem** (`admin@gmail.com` / `password123`) — *Mengelola Anggota (Tambah/Edit/Hapus DM)*
+   - **Administrator Sistem** (`admin@gmail.com` / `password123`) — *Mengelola Anggota (Tambah/Edit/Nonaktifkan & Aktifkan kembali DM tanpa menghapus riwayat data)*
    - **Ketua Umum** — Ashlahul Umam (`240605110008`, `ashlah@gmail.com` / `password123`) — *Jabatan Tertinggi*
    - **Wakil Ketua Umum** — Zakka Yogaraksa (`240605110009`, `zakka@gmail.com` / `password123`)
    - **Sekretaris Jenderal** — Muhammad Akmalul Fikri (`240605110147`, `akmal@gmail.com` / `password123`)
