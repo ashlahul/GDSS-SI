@@ -7,10 +7,10 @@ Website **Group Decision Support System (GDSS)** untuk penentuan prioritas progr
 ## Fitur Utama Sesuai Ketentuan Tugas UAS
 
 1. **Multi-Account Login (4 Decision Maker):**
-   - **Ketua Umum** — Ashlahul Umam (`240605110008`, `ketua@ormawa.ac.id` / `ketua123`) — *Jabatan Tertinggi*
-   - **Wakil Ketua Umum** — Zakka Yogaraksa (`240605110009`, `wakil@ormawa.ac.id` / `wakil123`)
-   - **Sekretaris Jenderal** — Muhammad Akmalul Fikri (`240605110147`, `sekretaris@ormawa.ac.id` / `sekretaris123`)
-   - **Bendahara Umum** — Ega Fikri Prayoga (`240605110151`, `bendahara@ormawa.ac.id` / `bendahara123`)
+   - **Ketua Umum** — Ashlahul Umam (`240605110008`, `ashlah@gmail.com` / `password123`) — *Jabatan Tertinggi*
+   - **Wakil Ketua Umum** — Zakka Yogaraksa (`240605110009`, `zakka@gmail.com` / `password123`)
+   - **Sekretaris Jenderal** — Muhammad Akmalul Fikri (`240605110147`, `akmal@gmail.com` / `password123`)
+   - **Bendahara Umum** — Ega Fikri Prayoga (`240605110151`, `ega@gmail.com` / `password123`)
 
 2. **Database PostgreSQL + Prisma ORM (Multi-Device Sync):**
    - Seluruh data (`DecisionMaker`, `ProgramKerja`, `Vote`, `ConsensusRecord`, `ConsensusDetail`) tersimpan di PostgreSQL.

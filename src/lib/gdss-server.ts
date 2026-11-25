@@ -13,8 +13,8 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     id: 'dm-ketua',
     name: 'Ashlahul Umam',
     nim: '240605110008',
-    email: 'ketua@ormawa.ac.id',
-    password: 'ketua123',
+    email: 'ashlah@gmail.com',
+    password: 'password123',
     role: 'KETUA',
     roleLabel: 'Ketua Umum (Jabatan Tertinggi)',
     isHighestRole: true,
@@ -24,8 +24,8 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     id: 'dm-wakil',
     name: 'Zakka Yogaraksa',
     nim: '240605110009',
-    email: 'wakil@ormawa.ac.id',
-    password: 'wakil123',
+    email: 'zakka@gmail.com',
+    password: 'password123',
     role: 'WAKIL_KETUA',
     roleLabel: 'Wakil Ketua Umum',
     isHighestRole: false,
@@ -35,8 +35,8 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     id: 'dm-sekretaris',
     name: 'Muhammad Akmalul Fikri',
     nim: '240605110147',
-    email: 'sekretaris@ormawa.ac.id',
-    password: 'sekretaris123',
+    email: 'akmal@gmail.com',
+    password: 'password123',
     role: 'SEKRETARIS',
     roleLabel: 'Sekretaris Jenderal',
     isHighestRole: false,
@@ -46,8 +46,8 @@ export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
     id: 'dm-bendahara',
     name: 'Ega Fikri Prayoga',
     nim: '240605110151',
-    email: 'bendahara@ormawa.ac.id',
-    password: 'bendahara123',
+    email: 'ega@gmail.com',
+    password: 'password123',
     role: 'BENDAHARA',
     roleLabel: 'Bendahara Umum',
     isHighestRole: false,
@@ -112,14 +112,20 @@ const ROLE_ORDER: Record<RoleType, number> = {
 
 export async function ensureSeeded() {
   const existingDms = await prisma.decisionMaker.findMany({
-    select: { id: true, name: true, nim: true },
+    select: { id: true, name: true, nim: true, email: true, password: true },
   });
 
   const needsSync =
     existingDms.length !== SEED_DECISION_MAKERS.length ||
     SEED_DECISION_MAKERS.some((seed) => {
       const found = existingDms.find((e) => e.id === seed.id);
-      return !found || found.name !== seed.name || found.nim !== seed.nim;
+      return (
+        !found ||
+        found.name !== seed.name ||
+        found.nim !== seed.nim ||
+        found.email !== seed.email ||
+        found.password !== seed.password
+      );
     });
 
   if (needsSync) {

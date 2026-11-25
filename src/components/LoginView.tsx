@@ -66,7 +66,7 @@ export const LoginView: React.FC = () => {
                 name="email"
                 type="email"
                 autoComplete="email"
-                placeholder="nama@ormawa.ac.id"
+                placeholder="nama@gmail.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
