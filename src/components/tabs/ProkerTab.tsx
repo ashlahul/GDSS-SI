@@ -226,7 +226,7 @@ export const ProkerTab: React.FC = () => {
 
         <div className="p-4 rounded-lg border border-neutral-200 bg-white shadow-2xs flex flex-col justify-center">
           <span className="text-[11px] text-neutral-500 font-medium">Metode</span>
-          <span className="text-xl font-bold text-purple-600 mt-1">Borda</span>
+          <span className="text-base font-bold text-purple-600 mt-1">TOPSIS + Borda</span>
         </div>
       </div>
 
@@ -235,7 +235,7 @@ export const ProkerTab: React.FC = () => {
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <span>
             <strong>Perhatian:</strong> Menambah atau menghapus alternatif program kerja akan
-            mereset sesi voting dan konsensus karena jumlah alternatif (<em>N</em>) pada Metode Borda berubah.
+            mereset matriks penilaian TOPSIS dan konsensus Borda karena jumlah alternatif (<em>N</em>) berubah.
           </span>
         </div>
       )}

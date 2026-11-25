@@ -3,9 +3,9 @@ import "./globals.css";
 import { GDSSProvider } from "@/context/GDSSContext";
 
 export const metadata: Metadata = {
-  title: "GDSS Ormawa - Sistem Pendukung Keputusan Kelompok (Metode Borda)",
+  title: "GDSS Ormawa - Sistem Pendukung Keputusan Kelompok (Hybrid TOPSIS + Borda)",
   description:
-    "Sistem Pendukung Keputusan Kelompok Penentuan Prioritas Program Kerja Organisasi Mahasiswa Menggunakan Metode Borda",
+    "Sistem Pendukung Keputusan Kelompok Penentuan Prioritas Program Kerja Organisasi Mahasiswa Menggunakan Metode Hybrid TOPSIS dan Borda",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

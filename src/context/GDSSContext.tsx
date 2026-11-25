@@ -16,6 +16,7 @@ import {
   ConsensusRecord,
   RoleType,
 } from '@/types/gdss';
+import { TopsisScoreInput } from '@/lib/topsis';
 
 export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
   {
@@ -74,7 +75,7 @@ interface GDSSContextType {
   updateProker: (id: string, proker: Partial<ProgramKerja>) => Promise<void>;
   deleteProker: (id: string) => Promise<void>;
   votes: Record<string, DecisionMakerVote>;
-  submitVote: (userId: string, rankedProkerIds: string[]) => Promise<void>;
+  submitVote: (userId: string, criteriaInputs: TopsisScoreInput[]) => Promise<void>;
   isConsensusReady: boolean;
   consensusResult: ConsensusRecord | null;
   executeConsensus: () => Promise<{ success: boolean; message: string }>;
@@ -272,11 +273,11 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
     if (res.ok) applyServerState(updated);
   };
 
-  const submitVote = async (userId: string, rankedProkerIds: string[]) => {
+  const submitVote = async (userId: string, criteriaInputs: TopsisScoreInput[]) => {
     const res = await fetch('/api/votes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, rankedProkerIds }),
+      body: JSON.stringify({ userId, criteriaInputs }),
     });
     const updated = await res.json();
     if (res.ok) applyServerState(updated);

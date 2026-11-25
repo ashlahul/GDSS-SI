@@ -52,7 +52,7 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
             SISTEM PENDUKUNG KEPUTUSAN KELOMPOK (GDSS) PENENTUAN PRIORITAS PROGRAM KERJA
           </h2>
           <p className="text-xs mt-1">
-            Dokumen Konsensus Resmi Pengambilan Keputusan • Metode Voting Borda Count
+            Dokumen Konsensus Resmi Pengambilan Keputusan • Hybrid TOPSIS & Metode Borda Count
           </p>
         </div>
       </div>
@@ -71,10 +71,11 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
       <p className="mb-4 text-justify">
         Pada hari ini, <strong>{formattedDate}</strong>, telah dilaksanakan pengambilan keputusan
         secara kolektif menggunakan Sistem Pendukung Keputusan Kelompok (GDSS) berbasis website dengan
-        metode perhitungan peringkat preferensial <strong>Metode Borda (Borda Count)</strong>.
-        Penilaian telah diberikan secara independen oleh seluruh pengambil keputusan (Decision Maker),
-        yaitu Ketua Umum, Wakil Ketua Umum, Sekretaris Jenderal, dan Bendahara Umum, dan telah
-        disahkan secara resmi melalui akun jabatan tertinggi oleh{' '}
+        metode gabungan <strong>Hybrid TOPSIS & Borda Count</strong> (evaluasi multi-kriteria
+        individu menggunakan <em>TOPSIS</em> dan agregasi konsensus kelompok menggunakan{' '}
+        <em>Metode Borda</em>). Penilaian telah diberikan secara independen oleh seluruh pengambil
+        keputusan (Decision Maker), yaitu Ketua Umum, Wakil Ketua Umum, Sekretaris Jenderal, dan
+        Bendahara Umum, dan telah disahkan secara resmi melalui akun jabatan tertinggi oleh{' '}
         <strong>{consensusResult.authorizedBy} (Ketua Umum)</strong>.
       </p>
 
@@ -108,16 +109,28 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
                 {formatRupiah(row.proker.anggaran)}
               </td>
               <td className="border border-black p-2 text-center">
-                Rank {row.ketuaRank} ({row.ketuaPoints})
+                <div>Rank {row.ketuaRank} ({row.ketuaPoints})</div>
+                <div className="text-[10px] font-mono text-gray-600">
+                  V={row.ketuaTopsis.toFixed(3)}
+                </div>
               </td>
               <td className="border border-black p-2 text-center">
-                Rank {row.wakilRank} ({row.wakilPoints})
+                <div>Rank {row.wakilRank} ({row.wakilPoints})</div>
+                <div className="text-[10px] font-mono text-gray-600">
+                  V={row.wakilTopsis.toFixed(3)}
+                </div>
               </td>
               <td className="border border-black p-2 text-center">
-                Rank {row.sekretarisRank} ({row.sekretarisPoints})
+                <div>Rank {row.sekretarisRank} ({row.sekretarisPoints})</div>
+                <div className="text-[10px] font-mono text-gray-600">
+                  V={row.sekretarisTopsis.toFixed(3)}
+                </div>
               </td>
               <td className="border border-black p-2 text-center">
-                Rank {row.bendaharaRank} ({row.bendaharaPoints})
+                <div>Rank {row.bendaharaRank} ({row.bendaharaPoints})</div>
+                <div className="text-[10px] font-mono text-gray-600">
+                  V={row.bendaharaTopsis.toFixed(3)}
+                </div>
               </td>
               <td className="border border-black p-2 text-center font-bold">
                 {row.totalBordaPoints}

@@ -41,7 +41,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
 const CONSENSUS_NAV_ITEMS: NavItem[] = [
   { id: 'consensus', label: 'Konsensus Borda', icon: Scale },
   { id: 'results', label: 'Hasil & Berita Acara', icon: Trophy },
-  { id: 'guide', label: 'Alur & Metode Borda', icon: BookOpen },
+  { id: 'guide', label: 'Alur & TOPSIS + Borda', icon: BookOpen },
 ];
 
 const COLLAPSED_STORAGE_KEY = 'gdss_sidebar_collapsed';
@@ -329,7 +329,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
           <span className="font-bold text-sm text-neutral-900">GDSS Ormawa</span>
           <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-purple-100/70 text-purple-700 border border-purple-200/50">
-            Borda
+            TOPSIS + Borda
           </span>
         </div>
 
@@ -500,7 +500,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                         GDSS Ormawa
                       </span>
                       <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-purple-100/70 text-purple-700 border border-purple-200/50">
-                        Borda
+                        TOPSIS
                       </span>
                     </div>
                     <span className="text-[10px] text-neutral-400 font-medium truncate max-w-[130px]">
@@ -968,7 +968,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <header className="hidden md:flex h-11 border-b border-neutral-200 bg-white px-5 items-center justify-between shrink-0 select-none print:hidden">
           <div className="flex items-center gap-2 text-xs">
             <span className="font-bold text-neutral-900">
-              GDSS Ormawa (Borda)
+              GDSS Ormawa (TOPSIS + Borda)
             </span>
             <span className="px-2 py-0.5 rounded bg-neutral-100 text-neutral-600 text-[10px] font-medium border border-neutral-200/60">
               Ruang Keputusan

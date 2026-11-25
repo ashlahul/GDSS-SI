@@ -46,6 +46,11 @@ model Vote {
   id              String        @id @default(cuid())
   decisionMakerId String
   prokerId        String
+  c1Score         Int           @default(3)
+  c2Score         Int           @default(3)
+  c3Score         Int           @default(3)
+  c4Score         Int           @default(3)
+  topsisScore     Float         @default(0)
   rank            Int
   bordaPoints     Int
   submittedAt     DateTime      @default(now())
@@ -70,12 +75,16 @@ model ConsensusDetail {
   prokerId             String
   ketuaRank            Int
   ketuaPoints          Int
+  ketuaTopsis          Float           @default(0)
   wakilRank            Int             @default(0)
   wakilPoints          Int             @default(0)
+  wakilTopsis          Float           @default(0)
   sekretarisRank       Int
   sekretarisPoints     Int
+  sekretarisTopsis     Float           @default(0)
   bendaharaRank        Int
   bendaharaPoints      Int
+  bendaharaTopsis      Float           @default(0)
   totalBordaPoints     Int
   finalRank            Int
   statusRecommendation String

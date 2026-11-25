@@ -61,40 +61,59 @@ export async function POST(req: Request) {
     const bendVotes = votes.filter((v) => v.decisionMakerId === 'dm-bendahara');
 
     const calculatedRows = prokers.map((proker) => {
-      const kRank = ketuaVotes.find((v) => v.prokerId === proker.id)?.rank ?? n;
+      const kVote = ketuaVotes.find((v) => v.prokerId === proker.id);
+      const kRank = kVote?.rank ?? n;
       const kPoints = n - kRank + 1;
+      const kTopsis = kVote?.topsisScore ?? 0;
 
-      const wRank = wakilVotes.find((v) => v.prokerId === proker.id)?.rank ?? n;
+      const wVote = wakilVotes.find((v) => v.prokerId === proker.id);
+      const wRank = wVote?.rank ?? n;
       const wPoints = n - wRank + 1;
+      const wTopsis = wVote?.topsisScore ?? 0;
 
-      const sRank = sekVotes.find((v) => v.prokerId === proker.id)?.rank ?? n;
+      const sVote = sekVotes.find((v) => v.prokerId === proker.id);
+      const sRank = sVote?.rank ?? n;
       const sPoints = n - sRank + 1;
+      const sTopsis = sVote?.topsisScore ?? 0;
 
-      const bRank = bendVotes.find((v) => v.prokerId === proker.id)?.rank ?? n;
+      const bVote = bendVotes.find((v) => v.prokerId === proker.id);
+      const bRank = bVote?.rank ?? n;
       const bPoints = n - bRank + 1;
+      const bTopsis = bVote?.topsisScore ?? 0;
 
       return {
         prokerId: proker.id,
         ketuaRank: kRank,
         ketuaPoints: kPoints,
+        ketuaTopsis: kTopsis,
         wakilRank: wRank,
         wakilPoints: wPoints,
+        wakilTopsis: wTopsis,
         sekretarisRank: sRank,
         sekretarisPoints: sPoints,
+        sekretarisTopsis: sTopsis,
         bendaharaRank: bRank,
         bendaharaPoints: bPoints,
+        bendaharaTopsis: bTopsis,
         totalBordaPoints: kPoints + wPoints + sPoints + bPoints,
         finalRank: 0,
         statusRecommendation: 'Prioritas Kedua',
       };
     });
 
-    // Sort descending by totalBordaPoints, tie-breaker by Ketua's preference
+    // Sort descending by totalBordaPoints, tie-breaker by Ketua's preference, then total TOPSIS V_i
     calculatedRows.sort((a, b) => {
       if (b.totalBordaPoints !== a.totalBordaPoints) {
         return b.totalBordaPoints - a.totalBordaPoints;
       }
-      return b.ketuaPoints - a.ketuaPoints;
+      if (b.ketuaPoints !== a.ketuaPoints) {
+        return b.ketuaPoints - a.ketuaPoints;
+      }
+      const aTopsisSum =
+        a.ketuaTopsis + a.wakilTopsis + a.sekretarisTopsis + a.bendaharaTopsis;
+      const bTopsisSum =
+        b.ketuaTopsis + b.wakilTopsis + b.sekretarisTopsis + b.bendaharaTopsis;
+      return bTopsisSum - aTopsisSum;
     });
 
     calculatedRows.forEach((row, index) => {

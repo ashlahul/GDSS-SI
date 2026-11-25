@@ -115,7 +115,7 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
             </h1>
           </div>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Masuk sebagai <strong className="text-neutral-800">{currentUser.name}</strong> ({currentUser.roleLabel}) • Pantau penilaian & konsensus Borda.
+            Masuk sebagai <strong className="text-neutral-800">{currentUser.name}</strong> ({currentUser.roleLabel}) • Pantau penilaian TOPSIS & konsensus Borda.
           </p>
         </div>
 
@@ -190,8 +190,8 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
             }`}
           >
             {hasUserVoted
-              ? 'Siap digabungkan dengan Metode Borda'
-              : 'Segera susun urutan prioritas Anda'}
+              ? 'Skor TOPSIS siap diagregasi Borda'
+              : 'Segera isi matriks kriteria TOPSIS Anda'}
           </p>
         </div>
 
@@ -219,14 +219,14 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
         <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
           <div>
             <h3 className="text-sm font-bold text-neutral-800">
-              Distribusi Skor Borda per Program Kerja
+              Distribusi Skor Borda (Hasil TOPSIS) per Program Kerja
             </h3>
             <p className="text-xs text-neutral-500">
-              Akumulasi poin preferensi dari Ketua, Wakil Ketua, Sekretaris, dan Bendahara secara real-time
+              Akumulasi poin Borda dari peringkat TOPSIS Ketua, Wakil Ketua, Sekretaris, dan Bendahara secara real-time
             </p>
           </div>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
-            Metode Borda
+            TOPSIS + Borda
           </span>
         </div>
 

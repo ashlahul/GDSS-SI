@@ -29,8 +29,8 @@ export const ResultsTab: React.FC<{ onNavigateToConsensus: () => void }> = ({
             Hasil Konsensus Belum Tersedia
           </h3>
           <p className="text-xs text-neutral-500 leading-relaxed">
-            Seluruh pengambil keputusan harus menyelesaikan penilaian individu terlebih dahulu, lalu{' '}
-            <strong>Ketua Umum (Jabatan Tertinggi)</strong> mengesahkan konsensus pada menu{' '}
+            Seluruh pengambil keputusan harus menyelesaikan penilaian TOPSIS individu terlebih dahulu, lalu{' '}
+            <strong>Ketua Umum (Jabatan Tertinggi)</strong> mengesahkan konsensus Borda pada menu{' '}
             <strong>Konsensus Borda</strong>.
           </p>
         </div>
@@ -194,20 +194,40 @@ export const ResultsTab: React.FC<{ onNavigateToConsensus: () => void }> = ({
                       {formatRupiah(row.proker.anggaran)}
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono">
-                      #{row.ketuaRank}{' '}
-                      <span className="text-purple-600 font-semibold">({row.ketuaPoints})</span>
+                      <div>
+                        #{row.ketuaRank}{' '}
+                        <span className="text-purple-600 font-semibold">({row.ketuaPoints})</span>
+                      </div>
+                      <div className="text-[10px] text-neutral-400">
+                        V={row.ketuaTopsis.toFixed(3)}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono">
-                      #{row.wakilRank}{' '}
-                      <span className="text-indigo-600 font-semibold">({row.wakilPoints})</span>
+                      <div>
+                        #{row.wakilRank}{' '}
+                        <span className="text-indigo-600 font-semibold">({row.wakilPoints})</span>
+                      </div>
+                      <div className="text-[10px] text-neutral-400">
+                        V={row.wakilTopsis.toFixed(3)}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono">
-                      #{row.sekretarisRank}{' '}
-                      <span className="text-emerald-600 font-semibold">({row.sekretarisPoints})</span>
+                      <div>
+                        #{row.sekretarisRank}{' '}
+                        <span className="text-emerald-600 font-semibold">({row.sekretarisPoints})</span>
+                      </div>
+                      <div className="text-[10px] text-neutral-400">
+                        V={row.sekretarisTopsis.toFixed(3)}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono">
-                      #{row.bendaharaRank}{' '}
-                      <span className="text-blue-600 font-semibold">({row.bendaharaPoints})</span>
+                      <div>
+                        #{row.bendaharaRank}{' '}
+                        <span className="text-blue-600 font-semibold">({row.bendaharaPoints})</span>
+                      </div>
+                      <div className="text-[10px] text-neutral-400">
+                        V={row.bendaharaTopsis.toFixed(3)}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono font-bold text-purple-700">
                       {row.totalBordaPoints}

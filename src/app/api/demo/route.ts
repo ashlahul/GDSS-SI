@@ -1,6 +1,40 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ensureSeeded, getFullGDSSState, SEED_PROKERS } from '@/lib/gdss-server';
+import { computeTopsis, TopsisScoreInput } from '@/lib/topsis';
+
+type RoleScoresPreset = Record<string, { c1: number; c2: number; c3: number; c4: number }>;
+
+const DEMO_MATRIX_PRESETS: Record<string, RoleScoresPreset> = {
+  'dm-ketua': {
+    'PK-01': { c1: 5, c2: 5, c3: 5, c4: 2 },
+    'PK-02': { c1: 5, c2: 4, c3: 5, c4: 4 },
+    'PK-03': { c1: 4, c2: 4, c3: 4, c4: 2 },
+    'PK-04': { c1: 3, c2: 4, c3: 3, c4: 2 },
+    'PK-05': { c1: 3, c2: 3, c3: 4, c4: 4 },
+  },
+  'dm-wakil': {
+    'PK-01': { c1: 4, c2: 5, c3: 5, c4: 2 },
+    'PK-02': { c1: 5, c2: 5, c3: 5, c4: 3 },
+    'PK-03': { c1: 4, c2: 4, c3: 5, c4: 2 },
+    'PK-04': { c1: 3, c2: 3, c3: 4, c4: 2 },
+    'PK-05': { c1: 4, c2: 3, c3: 3, c4: 4 },
+  },
+  'dm-sekretaris': {
+    'PK-01': { c1: 4, c2: 5, c3: 4, c4: 2 },
+    'PK-02': { c1: 4, c2: 3, c3: 4, c4: 4 },
+    'PK-03': { c1: 5, c2: 5, c3: 4, c4: 2 },
+    'PK-04': { c1: 3, c2: 5, c3: 4, c4: 2 },
+    'PK-05': { c1: 3, c2: 3, c3: 3, c4: 3 },
+  },
+  'dm-bendahara': {
+    'PK-01': { c1: 5, c2: 4, c3: 4, c4: 2 },
+    'PK-02': { c1: 5, c2: 3, c3: 4, c4: 5 },
+    'PK-03': { c1: 4, c2: 4, c3: 4, c4: 2 },
+    'PK-04': { c1: 4, c2: 5, c3: 4, c4: 1 },
+    'PK-05': { c1: 3, c2: 3, c3: 3, c4: 5 },
+  },
+};
 
 export async function POST(req: Request) {
   try {
@@ -12,70 +46,46 @@ export async function POST(req: Request) {
       const prokers = await prisma.programKerja.findMany({
         orderBy: { code: 'asc' },
       });
-      const pIds = prokers.map((p) => p.id);
 
-      if (pIds.length === 0) {
+      if (prokers.length === 0) {
         return NextResponse.json(
           { error: 'Tidak ada program kerja untuk disimulasikan.' },
           { status: 400 }
         );
       }
 
-      const ketuaOrder = [...pIds];
-      const wakilOrder = [...pIds];
-      if (wakilOrder.length >= 2) {
-        const temp = wakilOrder[0];
-        wakilOrder[0] = wakilOrder[1];
-        wakilOrder[1] = temp;
-      }
-
-      const sekOrder = [...pIds];
-      if (sekOrder.length >= 3) {
-        const temp = sekOrder[0];
-        sekOrder[0] = sekOrder[2];
-        sekOrder[2] = temp;
-      }
-
-      const bendOrder = [...pIds];
-      if (bendOrder.length >= 4) {
-        const temp = bendOrder[1];
-        bendOrder[1] = bendOrder[3];
-        bendOrder[3] = temp;
-      }
-
-      const n = pIds.length;
+      const dmIds = ['dm-ketua', 'dm-wakil', 'dm-sekretaris', 'dm-bendahara'] as const;
       const now = new Date();
+      const voteData = dmIds.flatMap((dmId, dmOffset) => {
+        const preset = DEMO_MATRIX_PRESETS[dmId] || {};
+        const inputs: TopsisScoreInput[] = prokers.map((p, idx) => {
+          const found = preset[p.code];
+          if (found) {
+            return { prokerId: p.id, ...found };
+          }
+          return {
+            prokerId: p.id,
+            c1: ((idx + dmOffset) % 4) + 2,
+            c2: ((idx + 1 + dmOffset) % 4) + 2,
+            c3: ((idx + 2) % 4) + 2,
+            c4: ((idx + dmOffset) % 4) + 1,
+          };
+        });
 
-      const voteData = [
-        ...ketuaOrder.map((prokerId, idx) => ({
-          decisionMakerId: 'dm-ketua',
-          prokerId,
-          rank: idx + 1,
-          bordaPoints: n - idx,
+        const topsis = computeTopsis(inputs);
+        return topsis.rows.map((row) => ({
+          decisionMakerId: dmId,
+          prokerId: row.prokerId,
+          c1Score: row.raw.c1,
+          c2Score: row.raw.c2,
+          c3Score: row.raw.c3,
+          c4Score: row.raw.c4,
+          topsisScore: row.preferenceScore,
+          rank: row.rank,
+          bordaPoints: row.bordaPoints,
           submittedAt: now,
-        })),
-        ...wakilOrder.map((prokerId, idx) => ({
-          decisionMakerId: 'dm-wakil',
-          prokerId,
-          rank: idx + 1,
-          bordaPoints: n - idx,
-          submittedAt: now,
-        })),
-        ...sekOrder.map((prokerId, idx) => ({
-          decisionMakerId: 'dm-sekretaris',
-          prokerId,
-          rank: idx + 1,
-          bordaPoints: n - idx,
-          submittedAt: now,
-        })),
-        ...bendOrder.map((prokerId, idx) => ({
-          decisionMakerId: 'dm-bendahara',
-          prokerId,
-          rank: idx + 1,
-          bordaPoints: n - idx,
-          submittedAt: now,
-        })),
-      ];
+        }));
+      });
 
       await prisma.$transaction([
         prisma.consensusRecord.deleteMany({}),

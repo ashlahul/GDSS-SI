@@ -62,9 +62,14 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Scale className="w-5 h-5 text-purple-600" />
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">
-            Konsensus Borda
-          </h1>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900">
+              Konsensus Borda (Agregasi TOPSIS)
+            </h1>
+            <p className="text-[11px] text-neutral-500">
+              Menggabungkan peringkat TOPSIS dari {totalDMs} Decision Maker menjadi keputusan kelompok
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -152,6 +157,21 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
                 )}
               </div>
 
+              {isDone && (() => {
+                const topPick = userVote.rankings.find((r) => r.rank === 1);
+                const topProker = programKerjaList.find((p) => p.id === topPick?.prokerId);
+                return topPick && topProker ? (
+                  <div className="px-2.5 py-1.5 rounded bg-purple-50/70 border border-purple-100 flex items-center justify-between text-[10px]">
+                    <span className="text-purple-800 font-medium truncate pr-2">
+                      Top #1 TOPSIS: <strong>{topProker.code}</strong>
+                    </span>
+                    <span className="font-mono font-bold text-purple-700 shrink-0">
+                      V={topPick.topsisScore.toFixed(3)}
+                    </span>
+                  </div>
+                ) : null;
+              })()}
+
               <div className="pt-2.5 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-500">
                 <span>Progres Penilaian</span>
                 <span className="font-mono font-semibold text-neutral-800">
@@ -167,10 +187,10 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
       <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-2xs space-y-4">
         <div>
           <h3 className="text-sm font-bold text-neutral-900">
-            Pengesahan Konsensus Pengambilan Keputusan (Metode Borda)
+            Pengesahan Konsensus Pengambilan Keputusan (Hybrid TOPSIS + Borda)
           </h3>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Eksekusi konsensus hanya terbuka setelah {totalDMs}/{totalDMs} pengambil keputusan selesai menilai dan hanya dapat disahkan melalui akun Ketua Umum (jabatan tertinggi).
+            Eksekusi konsensus hanya terbuka setelah {totalDMs}/{totalDMs} pengambil keputusan selesai mengisi matriks TOPSIS dan hanya dapat disahkan melalui akun Ketua Umum (jabatan tertinggi).
           </p>
         </div>
 
@@ -183,7 +203,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
               </p>
               <p className="text-neutral-600 leading-relaxed">
                 Anda saat ini login sebagai <strong>{currentUser.roleLabel}</strong>. Sesuai
-                ketentuan sistem, pengesahan konsensus Borda hanya dapat dijalankan melalui akun
+                ketentuan sistem, pengesahan konsensus TOPSIS + Borda hanya dapat dijalankan melalui akun
                 Ketua Umum.
               </p>
               <p className="text-neutral-500 pt-1">
@@ -202,7 +222,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
           <div className="p-8 rounded-lg border border-dashed border-neutral-300 bg-[#f9fafb] text-center space-y-2">
             <Clock className="w-6 h-6 text-amber-500 mx-auto" />
             <h4 className="font-bold text-neutral-900 text-sm">
-              Menunggu Seluruh Pengambil Keputusan Menyelesaikan Penilaian
+              Menunggu Seluruh Pengambil Keputusan Menyelesaikan Penilaian TOPSIS
             </h4>
             <p className="text-xs text-neutral-500 max-w-md mx-auto">
               Tombol pengesahan di akun Ketua akan aktif otomatis setelah seluruh {totalDMs} pengurus
@@ -214,11 +234,10 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
             <CheckCircle2 className="w-7 h-7 text-emerald-600 mx-auto" />
             <div>
               <h4 className="font-bold text-neutral-900 text-sm">
-                Seluruh Penilaian Lengkap ({totalDMs}/{totalDMs} Selesai)
+                Seluruh Matriks TOPSIS Lengkap ({totalDMs}/{totalDMs} Selesai)
               </h4>
               <p className="text-xs text-neutral-600 mt-1">
-                Klik tombol di bawah ini untuk menghitung poin Borda dan mengesahkan prioritas
-                program kerja atas nama <strong>{currentUser.name}</strong>.
+                Klik tombol di bawah ini untuk menggabungkan peringkat TOPSIS menggunakan Metode Borda dan mengesahkan prioritas atas nama <strong>{currentUser.name}</strong>.
               </p>
             </div>
 
@@ -233,7 +252,7 @@ export const ConsensusTab: React.FC<{ onNavigateToResults: () => void }> = ({
                 <span>
                   {isExecuting
                     ? 'Menghitung & Menyimpan...'
-                    : 'Hitung & Sahkan Konsensus (Metode Borda)'}
+                    : 'Hitung & Sahkan Konsensus (TOPSIS + Borda)'}
                 </span>
               </button>
 

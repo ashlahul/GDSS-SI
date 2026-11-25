@@ -3,15 +3,20 @@
 import React, { useState, useMemo } from 'react';
 import { useGDSS } from '@/context/GDSSContext';
 import {
+  TOPSIS_CRITERIA,
+  TopsisScoreInput,
+  computeTopsis,
+} from '@/lib/topsis';
+import {
   ListOrdered,
-  ArrowUp,
-  ArrowDown,
-  ChevronsUp,
   CheckCircle2,
   AlertCircle,
   Info,
   Crown,
   ArrowRight,
+  Calculator,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { ProgramKerja, DecisionMaker, DecisionMakerVote } from '@/types/gdss';
 
@@ -19,9 +24,11 @@ interface VotingListFormProps {
   currentUser: DecisionMaker;
   programKerjaList: ProgramKerja[];
   currentVote: DecisionMakerVote | undefined;
-  submitVote: (userId: string, rankedProkerIds: string[]) => Promise<void>;
+  submitVote: (userId: string, criteriaInputs: TopsisScoreInput[]) => Promise<void>;
   onNavigateToConsensus: () => void;
 }
+
+const SCORE_LEVELS = [1, 2, 3, 4, 5] as const;
 
 const VotingListForm: React.FC<VotingListFormProps> = ({
   currentUser,
@@ -37,45 +44,74 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
       programKerjaList.length > 0
   );
 
-  const initialList = useMemo(() => {
-    if (programKerjaList.length === 0) return [];
-    if (currentVote && currentVote.rankings.length === programKerjaList.length) {
-      return [...programKerjaList].sort((a, b) => {
-        const rankA =
-          currentVote.rankings.find((r) => r.prokerId === a.id)?.rank || 999;
-        const rankB =
-          currentVote.rankings.find((r) => r.prokerId === b.id)?.rank || 999;
-        return rankA - rankB;
-      });
+  const initialScores = useMemo(() => {
+    const map: Record<string, { c1: number; c2: number; c3: number; c4: number }> = {};
+    for (const p of programKerjaList) {
+      const existing = currentVote?.rankings.find((r) => r.prokerId === p.id);
+      map[p.id] = {
+        c1: existing?.c1Score ?? 3,
+        c2: existing?.c2Score ?? 3,
+        c3: existing?.c3Score ?? 3,
+        c4: existing?.c4Score ?? 3,
+      };
     }
-    return [...programKerjaList];
+    return map;
   }, [programKerjaList, currentVote]);
 
-  const [orderedList, setOrderedList] = useState<ProgramKerja[]>(initialList);
+  const [scoresMap, setScoresMap] =
+    useState<Record<string, { c1: number; c2: number; c3: number; c4: number }>>(
+      initialScores
+    );
   const [isDirty, setIsDirty] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
 
-  const moveItem = (fromIdx: number, toIdx: number) => {
-    if (toIdx < 0 || toIdx >= orderedList.length || fromIdx === toIdx) return;
-    const next = [...orderedList];
-    const [moved] = next.splice(fromIdx, 1);
-    next.splice(toIdx, 0, moved);
-    setOrderedList(next);
+  const inputs: TopsisScoreInput[] = useMemo(
+    () =>
+      programKerjaList.map((p) => ({
+        prokerId: p.id,
+        c1: scoresMap[p.id]?.c1 ?? 3,
+        c2: scoresMap[p.id]?.c2 ?? 3,
+        c3: scoresMap[p.id]?.c3 ?? 3,
+        c4: scoresMap[p.id]?.c4 ?? 3,
+      })),
+    [programKerjaList, scoresMap]
+  );
+
+  const liveTopsis = useMemo(() => computeTopsis(inputs), [inputs]);
+
+  const computedByProkerId = useMemo(() => {
+    return new Map(liveTopsis.rows.map((r) => [r.prokerId, r]));
+  }, [liveTopsis]);
+
+  const sortedPreviewRows = useMemo(() => {
+    return [...liveTopsis.rows].sort((a, b) => a.rank - b.rank);
+  }, [liveTopsis]);
+
+  const handleScoreChange = (
+    prokerId: string,
+    criterionId: 'c1' | 'c2' | 'c3' | 'c4',
+    value: number
+  ) => {
+    setScoresMap((prev) => ({
+      ...prev,
+      [prokerId]: {
+        ...(prev[prokerId] ?? { c1: 3, c2: 3, c3: 3, c4: 3 }),
+        [criterionId]: value,
+      },
+    }));
     setIsDirty(true);
     setJustSaved(false);
   };
 
   const handleSubmit = async () => {
     setIsSaving(true);
-    const ids = orderedList.map((p) => p.id);
-    await submitVote(currentUser.id, ids);
+    await submitVote(currentUser.id, inputs);
     setIsSaving(false);
     setIsDirty(false);
     setJustSaved(true);
   };
-
-  const n = orderedList.length;
 
   const formatRupiah = (val: number) =>
     new Intl.NumberFormat('id-ID', {
@@ -84,15 +120,25 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
       maximumFractionDigits: 0,
     }).format(val);
 
+  const prokerById = useMemo(
+    () => new Map(programKerjaList.map((p) => [p.id, p])),
+    [programKerjaList]
+  );
+
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white p-6 space-y-5 select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <ListOrdered className="w-5 h-5 text-purple-600" />
-          <h1 className="text-xl font-bold tracking-tight text-neutral-900">
-            Penilaian Individu
-          </h1>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900">
+              Penilaian Individu (TOPSIS)
+            </h1>
+            <p className="text-[11px] text-neutral-500">
+              Nilai tiap proker pada 4 kriteria; sistem menghitung preferensi TOPSIS (<em>V<sub>i</sub></em>) & mengonversinya menjadi poin Borda.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -135,7 +181,7 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
-              <strong>Penilaian tersimpan!</strong> Urutan prioritas Anda telah masuk ke PostgreSQL.
+              <strong>Perhitungan TOPSIS tersimpan!</strong> Skor <em>V<sub>i</sub></em> dan poin Borda Anda telah masuk ke PostgreSQL.
             </span>
           </div>
           <button
@@ -149,36 +195,75 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
         </div>
       )}
 
-      {/* Borda Formula Info */}
-      <div className="p-3.5 rounded-lg bg-[#f9fafb] border border-neutral-200 text-xs text-neutral-600 flex items-start gap-2.5">
+      {/* 4 TOPSIS Criteria Legend Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {TOPSIS_CRITERIA.map((c) => (
+          <div
+            key={c.id}
+            className="p-3 rounded-lg border border-neutral-200 bg-[#f9fafb] space-y-1.5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-neutral-900 font-mono">
+                {c.code} • {Math.round(c.weight * 100)}%
+              </span>
+              <span
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                  c.type === 'BENEFIT'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}
+              >
+                {c.type}
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-neutral-800 leading-snug">
+              {c.name}
+            </p>
+            <p className="text-[10px] text-neutral-500 leading-relaxed">
+              {c.description}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Info Banner */}
+      <div className="p-3 rounded-lg bg-[#f9fafb] border border-neutral-200 text-xs text-neutral-600 flex items-start gap-2.5">
         <Info className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
         <span>
-          <strong>Aturan Metode Borda:</strong> Susun peringkat dari prioritas <strong>#1</strong> hingga{' '}
-          <strong>#{n}</strong> untuk {currentUser.roleLabel}. Posisi #1 mendapat{' '}
-          <strong className="text-purple-600 font-mono">+{n} poin</strong>, #2 mendapat{' '}
-          <strong className="font-mono">+{Math.max(1, n - 1)} poin</strong>, hingga posisi terakhir{' '}
-          <strong className="font-mono">+1 poin</strong>.
+          <strong>Aturan Hybrid TOPSIS + Borda:</strong> Beri skor <strong>1–5</strong> pada tiap kriteria untuk {currentUser.roleLabel}. Pada kriteria <strong>C4 (Cost)</strong>, nilai <strong>1</strong> berarti paling hemat/ideal dan <strong>5</strong> berarti biaya/risiko paling tinggi. Peringkat dari nilai preferensi TOPSIS (<em>V<sub>i</sub></em>) otomatis dikonversi ke poin Borda.
         </span>
       </div>
 
-      {/* Ranking Table (KafaBot Table Style) */}
+      {/* TOPSIS Input Matrix Table */}
       <div className="rounded-lg border border-neutral-200 bg-white overflow-x-auto shadow-2xs">
         <table className="w-full text-left text-xs">
           <thead className="bg-[#f9fafb] border-b border-neutral-200 text-[11px] font-semibold text-neutral-500 select-none">
             <tr>
-              <th className="py-2.5 px-3.5 text-center w-20">Peringkat</th>
-              <th className="py-2.5 px-3">Kode</th>
-              <th className="py-2.5 px-3">Nama Program Kerja</th>
-              <th className="py-2.5 px-3">Divisi Pengusul</th>
-              <th className="py-2.5 px-3 text-right">Estimasi Anggaran</th>
-              <th className="py-2.5 px-3 text-center">Bobot Borda</th>
-              <th className="py-2.5 px-3.5 text-right">Urutkan</th>
+              <th className="py-2.5 px-3.5">Program Kerja</th>
+              {TOPSIS_CRITERIA.map((c) => (
+                <th key={c.id} className="py-2.5 px-2.5 text-center whitespace-nowrap">
+                  <div>
+                    {c.code}: {c.shortName}
+                  </div>
+                  <div className="text-[10px] font-normal text-neutral-400">
+                    {Math.round(c.weight * 100)}% • {c.type === 'COST' ? 'Cost' : 'Benefit'}
+                  </div>
+                </th>
+              ))}
+              <th className="py-2.5 px-3 text-center whitespace-nowrap">
+                Skor TOPSIS (<em>V<sub>i</sub></em>)
+              </th>
+              <th className="py-2.5 px-3 text-center whitespace-nowrap">Rank</th>
+              <th className="py-2.5 px-3.5 text-center whitespace-nowrap">Poin Borda</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 text-neutral-700">
-            {orderedList.map((proker, index) => {
-              const rank = index + 1;
-              const bordaPoints = n - index;
+            {programKerjaList.map((proker) => {
+              const rowScores = scoresMap[proker.id] ?? { c1: 3, c2: 3, c3: 3, c4: 3 };
+              const computed = computedByProkerId.get(proker.id);
+              const rank = computed?.rank ?? programKerjaList.length;
+              const bordaPts = computed?.bordaPoints ?? 1;
+              const vScore = computed?.preferenceScore ?? 0;
 
               return (
                 <tr
@@ -187,7 +272,57 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
                     rank === 1 ? 'bg-purple-50/30 hover:bg-purple-50/50' : 'hover:bg-neutral-50/80'
                   }`}
                 >
-                  <td className="py-3 px-3.5 text-center">
+                  <td className="py-3 px-3.5 min-w-[220px]">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                        {proker.code}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 font-mono">
+                        {formatRupiah(proker.anggaran)}
+                      </span>
+                    </div>
+                    <div className="font-semibold text-neutral-900 leading-snug">
+                      {proker.name}
+                    </div>
+                    <div className="text-[10px] text-neutral-400">{proker.divisi}</div>
+                  </td>
+
+                  {TOPSIS_CRITERIA.map((c) => {
+                    const currentVal = rowScores[c.id];
+                    const isCost = c.type === 'COST';
+                    return (
+                      <td key={c.id} className="py-3 px-2.5 text-center whitespace-nowrap">
+                        <div className="inline-flex items-center rounded border border-neutral-200 bg-neutral-50 p-0.5 gap-0.5">
+                          {SCORE_LEVELS.map((lvl) => {
+                            const active = currentVal === lvl;
+                            return (
+                              <button
+                                key={lvl}
+                                type="button"
+                                onClick={() => handleScoreChange(proker.id, c.id, lvl)}
+                                className={`w-6 h-6 rounded text-[11px] font-mono font-bold transition-colors cursor-pointer ${
+                                  active
+                                    ? isCost
+                                      ? 'bg-amber-600 text-white shadow-2xs'
+                                      : 'bg-purple-600 text-white shadow-2xs'
+                                    : 'text-neutral-500 hover:bg-white hover:text-neutral-900'
+                                }`}
+                                title={`${c.code} (${c.name}): ${lvl}`}
+                              >
+                                {lvl}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    );
+                  })}
+
+                  <td className="py-3 px-3 text-center font-mono font-bold text-neutral-900 tabular-nums">
+                    {vScore.toFixed(4)}
+                  </td>
+
+                  <td className="py-3 px-3 text-center">
                     <span
                       className={`inline-flex items-center justify-center w-7 h-7 rounded font-mono font-bold text-xs ${
                         rank === 1
@@ -202,60 +337,114 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
                       #{rank}
                     </span>
                   </td>
-                  <td className="py-3 px-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
-                      {proker.code}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 font-medium text-neutral-900">
-                    {proker.name}
-                    <span className="block text-[10px] text-neutral-400">
-                      Target: {proker.targetPeserta}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-neutral-600">{proker.divisi}</td>
-                  <td className="py-3 px-3 text-right font-mono font-medium text-neutral-700 whitespace-nowrap">
-                    {formatRupiah(proker.anggaran)}
-                  </td>
-                  <td className="py-3 px-3 text-center font-mono font-bold text-purple-600">
-                    +{bordaPoints} pts
-                  </td>
-                  <td className="py-3 px-3.5 text-right">
-                    <div className="inline-flex items-center gap-1">
-                      <button
-                        type="button"
-                        disabled={index === 0}
-                        onClick={() => moveItem(index, 0)}
-                        className="p-1.5 rounded border border-neutral-200 bg-white hover:bg-neutral-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
-                        title="Jadikan #1"
-                      >
-                        <ChevronsUp className="w-3.5 h-3.5 text-neutral-600" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={index === 0}
-                        onClick={() => moveItem(index, index - 1)}
-                        className="p-1.5 rounded border border-neutral-200 bg-white hover:bg-neutral-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
-                        title="Naikkan"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5 text-neutral-600" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={index === orderedList.length - 1}
-                        onClick={() => moveItem(index, index + 1)}
-                        className="p-1.5 rounded border border-neutral-200 bg-white hover:bg-neutral-100 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
-                        title="Turunkan"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5 text-neutral-600" />
-                      </button>
-                    </div>
+
+                  <td className="py-3 px-3.5 text-center font-mono font-bold text-purple-600 whitespace-nowrap">
+                    +{bordaPts} pts
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Collapsible Step-by-Step TOPSIS Math Inspection */}
+      <div className="rounded-lg border border-neutral-200 bg-white overflow-hidden shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setShowSteps((prev) => !prev)}
+          className="w-full px-4 py-3 bg-[#f9fafb] hover:bg-neutral-100/70 flex items-center justify-between text-xs font-semibold text-neutral-800 transition-colors cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <Calculator className="w-4 h-4 text-purple-600" />
+            <span>
+              Detail Perhitungan TOPSIS (Normalisasi Terbobot <em>Y</em>, Jarak{' '}
+              <em>D<sup>+</sup> / D<sup>-</sup></em>, & Peringkat Individu)
+            </span>
+          </span>
+          {showSteps ? (
+            <ChevronUp className="w-4 h-4 text-neutral-500" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-neutral-500" />
+          )}
+        </button>
+
+        {showSteps && (
+          <div className="p-4 space-y-4 border-t border-neutral-200 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+              <div className="p-3 rounded-lg bg-emerald-50/60 border border-emerald-200">
+                <div className="font-bold text-emerald-900 mb-1">
+                  Solusi Ideal Positif (A⁺)
+                </div>
+                <div className="font-mono text-emerald-800 flex flex-wrap gap-3">
+                  <span>C1: {liveTopsis.idealPositive.c1.toFixed(4)}</span>
+                  <span>C2: {liveTopsis.idealPositive.c2.toFixed(4)}</span>
+                  <span>C3: {liveTopsis.idealPositive.c3.toFixed(4)}</span>
+                  <span>C4: {liveTopsis.idealPositive.c4.toFixed(4)}</span>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-rose-50/60 border border-rose-200">
+                <div className="font-bold text-rose-900 mb-1">
+                  Solusi Ideal Negatif (A⁻)
+                </div>
+                <div className="font-mono text-rose-800 flex flex-wrap gap-3">
+                  <span>C1: {liveTopsis.idealNegative.c1.toFixed(4)}</span>
+                  <span>C2: {liveTopsis.idealNegative.c2.toFixed(4)}</span>
+                  <span>C3: {liveTopsis.idealNegative.c3.toFixed(4)}</span>
+                  <span>C4: {liveTopsis.idealNegative.c4.toFixed(4)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded border border-neutral-200">
+              <table className="w-full text-left text-[11px] tabular-nums">
+                <thead className="bg-[#f9fafb] border-b border-neutral-200 text-neutral-500 font-semibold">
+                  <tr>
+                    <th className="py-2 px-3">Rank</th>
+                    <th className="py-2 px-3">Proker</th>
+                    <th className="py-2 px-2.5 text-center">Y₁</th>
+                    <th className="py-2 px-2.5 text-center">Y₂</th>
+                    <th className="py-2 px-2.5 text-center">Y₃</th>
+                    <th className="py-2 px-2.5 text-center">Y₄</th>
+                    <th className="py-2 px-2.5 text-center">D⁺</th>
+                    <th className="py-2 px-2.5 text-center">D⁻</th>
+                    <th className="py-2 px-2.5 text-center">Vᵢ = D⁻/(D⁺+D⁻)</th>
+                    <th className="py-2 px-3 text-center">Borda</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100 font-mono">
+                  {sortedPreviewRows.map((row) => {
+                    const p = prokerById.get(row.prokerId);
+                    return (
+                      <tr key={row.prokerId} className="hover:bg-neutral-50">
+                        <td className="py-2 px-3 font-bold text-purple-700">#{row.rank}</td>
+                        <td className="py-2 px-3 font-sans font-semibold text-neutral-900">
+                          {p?.code} — {p?.name}
+                        </td>
+                        <td className="py-2 px-2.5 text-center">{row.weighted.c1.toFixed(3)}</td>
+                        <td className="py-2 px-2.5 text-center">{row.weighted.c2.toFixed(3)}</td>
+                        <td className="py-2 px-2.5 text-center">{row.weighted.c3.toFixed(3)}</td>
+                        <td className="py-2 px-2.5 text-center">{row.weighted.c4.toFixed(3)}</td>
+                        <td className="py-2 px-2.5 text-center text-rose-700">
+                          {row.dPlus.toFixed(4)}
+                        </td>
+                        <td className="py-2 px-2.5 text-center text-emerald-700">
+                          {row.dMinus.toFixed(4)}
+                        </td>
+                        <td className="py-2 px-2.5 text-center font-bold text-neutral-900">
+                          {row.preferenceScore.toFixed(4)}
+                        </td>
+                        <td className="py-2 px-3 text-center font-bold text-purple-700">
+                          +{row.bordaPoints}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Save Footer */}
@@ -266,12 +455,14 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
 
         <button
           type="button"
-          disabled={isSaving || orderedList.length === 0}
+          disabled={isSaving || programKerjaList.length === 0}
           onClick={handleSubmit}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 rounded bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-semibold text-xs transition shadow-2xs cursor-pointer"
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>{isSaving ? 'Menyimpan...' : 'Simpan & Kirim Penilaian Saya'}</span>
+          <span>
+            {isSaving ? 'Menghitung & Menyimpan...' : 'Hitung TOPSIS & Simpan Penilaian'}
+          </span>
         </button>
       </div>
     </div>

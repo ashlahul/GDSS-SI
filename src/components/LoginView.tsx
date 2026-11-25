@@ -124,7 +124,7 @@ export const LoginView: React.FC = () => {
               {isSubmitting ? 'Sedang masuk...' : 'Masuk ke Dashboard'}
             </button>
             <p className="text-[10px] text-neutral-500 text-center mt-4">
-              Sistem Pendukung Keputusan Kelompok (Metode Borda) • Neon PostgreSQL
+              Sistem Pendukung Keputusan Kelompok (Hybrid TOPSIS + Borda) • Neon PostgreSQL
             </p>
           </div>
         </form>
