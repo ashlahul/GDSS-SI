@@ -5,29 +5,29 @@ import { computeTopsis, TopsisScoreInput } from '@/lib/topsis';
 
 type RoleScoresPreset = Record<string, { c1: number; c2: number; c3: number; c4: number }>;
 
-const DEMO_MATRIX_PRESETS: Record<string, RoleScoresPreset> = {
-  'dm-ketua': {
+const ROLE_MATRIX_PRESETS: Record<string, RoleScoresPreset> = {
+  KETUA: {
     'PK-01': { c1: 5, c2: 5, c3: 5, c4: 2 },
     'PK-02': { c1: 5, c2: 4, c3: 5, c4: 4 },
     'PK-03': { c1: 4, c2: 4, c3: 4, c4: 2 },
     'PK-04': { c1: 3, c2: 4, c3: 3, c4: 2 },
     'PK-05': { c1: 3, c2: 3, c3: 4, c4: 4 },
   },
-  'dm-wakil': {
+  WAKIL_KETUA: {
     'PK-01': { c1: 4, c2: 5, c3: 5, c4: 2 },
     'PK-02': { c1: 5, c2: 5, c3: 5, c4: 3 },
     'PK-03': { c1: 4, c2: 4, c3: 5, c4: 2 },
     'PK-04': { c1: 3, c2: 3, c3: 4, c4: 2 },
     'PK-05': { c1: 4, c2: 3, c3: 3, c4: 4 },
   },
-  'dm-sekretaris': {
+  SEKRETARIS: {
     'PK-01': { c1: 4, c2: 5, c3: 4, c4: 2 },
     'PK-02': { c1: 4, c2: 3, c3: 4, c4: 4 },
     'PK-03': { c1: 5, c2: 5, c3: 4, c4: 2 },
     'PK-04': { c1: 3, c2: 5, c3: 4, c4: 2 },
     'PK-05': { c1: 3, c2: 3, c3: 3, c4: 3 },
   },
-  'dm-bendahara': {
+  BENDAHARA: {
     'PK-01': { c1: 5, c2: 4, c3: 4, c4: 2 },
     'PK-02': { c1: 5, c2: 3, c3: 4, c4: 5 },
     'PK-03': { c1: 4, c2: 4, c3: 4, c4: 2 },
@@ -43,21 +43,21 @@ export async function POST(req: Request) {
     const { action } = body as { action: 'simulate' | 'reset' };
 
     if (action === 'simulate') {
-      const prokers = await prisma.programKerja.findMany({
-        orderBy: { code: 'asc' },
-      });
+      const [prokers, dms] = await Promise.all([
+        prisma.programKerja.findMany({ orderBy: { code: 'asc' } }),
+        prisma.decisionMaker.findMany({ where: { role: { not: 'ADMIN' } } }),
+      ]);
 
-      if (prokers.length === 0) {
+      if (prokers.length === 0 || dms.length === 0) {
         return NextResponse.json(
-          { error: 'Tidak ada program kerja untuk disimulasikan.' },
+          { error: 'Tidak ada program kerja atau penilai untuk disimulasikan.' },
           { status: 400 }
         );
       }
 
-      const dmIds = ['dm-ketua', 'dm-wakil', 'dm-sekretaris', 'dm-bendahara'] as const;
       const now = new Date();
-      const voteData = dmIds.flatMap((dmId, dmOffset) => {
-        const preset = DEMO_MATRIX_PRESETS[dmId] || {};
+      const voteData = dms.flatMap((dm, dmOffset) => {
+        const preset = ROLE_MATRIX_PRESETS[dm.role] || {};
         const inputs: TopsisScoreInput[] = prokers.map((p, idx) => {
           const found = preset[p.code];
           if (found) {
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
 
         const topsis = computeTopsis(inputs);
         return topsis.rows.map((row) => ({
-          decisionMakerId: dmId,
+          decisionMakerId: dm.id,
           prokerId: row.prokerId,
           c1Score: row.raw.c1,
           c2Score: row.raw.c2,

@@ -26,21 +26,55 @@ interface VotingListFormProps {
   onNavigateToConsensus: () => void;
 }
 
-const BENEFIT_OPTIONS = [
-  { value: 5, label: '5 - Sangat Tinggi' },
-  { value: 4, label: '4 - Tinggi' },
-  { value: 3, label: '3 - Cukup' },
-  { value: 2, label: '2 - Kurang' },
-  { value: 1, label: '1 - Rendah' },
-];
-
-const COST_OPTIONS = [
-  { value: 1, label: '1 - Sangat Hemat' },
-  { value: 2, label: '2 - Hemat' },
-  { value: 3, label: '3 - Sedang' },
-  { value: 4, label: '4 - Mahal' },
-  { value: 5, label: '5 - Sangat Mahal' },
-];
+const CRITERION_META: Record<
+  'c1' | 'c2' | 'c3' | 'c4',
+  { header: string; sub: string; options: { value: number; text: string }[] }
+> = {
+  c1: {
+    header: 'Dampak',
+    sub: '30% • Benefit',
+    options: [
+      { value: 5, text: '5 - Sangat Penting' },
+      { value: 4, text: '4 - Penting' },
+      { value: 3, text: '3 - Cukup' },
+      { value: 2, text: '2 - Kurang' },
+      { value: 1, text: '1 - Rendah' },
+    ],
+  },
+  c2: {
+    header: 'Kesiapan',
+    sub: '25% • Benefit',
+    options: [
+      { value: 5, text: '5 - Sangat Siap' },
+      { value: 4, text: '4 - Siap' },
+      { value: 3, text: '3 - Cukup' },
+      { value: 2, text: '2 - Kurang' },
+      { value: 1, text: '1 - Belum Siap' },
+    ],
+  },
+  c3: {
+    header: 'Sinergi',
+    sub: '25% • Benefit',
+    options: [
+      { value: 5, text: '5 - Sangat Selaras' },
+      { value: 4, text: '4 - Selaras' },
+      { value: 3, text: '3 - Cukup' },
+      { value: 2, text: '2 - Kurang' },
+      { value: 1, text: '1 - Rendah' },
+    ],
+  },
+  c4: {
+    header: 'Biaya (Cost)',
+    sub: '20% • 1 = Hemat',
+    options: [
+      { value: 1, text: '1 - Sangat Hemat' },
+      { value: 2, text: '2 - Hemat' },
+      { value: 3, text: '3 - Sedang' },
+      { value: 4, text: '4 - Mahal' },
+      { value: 5, text: '5 - Sangat Mahal' },
+    ],
+  },
+};
 
 const VotingListForm: React.FC<VotingListFormProps> = ({
   currentUser,
@@ -154,10 +188,10 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
           <ListOrdered className="w-5 h-5 text-purple-600" />
           <div>
             <h1 className="text-xl font-bold tracking-tight text-neutral-900">
-              Penilaian Individu
+              Penilaian Program Kerja
             </h1>
             <p className="text-xs text-neutral-500">
-              Pilih skor tiap kriteria untuk <strong>{currentUser.roleLabel}</strong> — peringkat dihitung otomatis dengan TOPSIS.
+              Nilai tiap proker untuk <strong>{currentUser.roleLabel}</strong> — peringkat dihitung otomatis dengan TOPSIS.
             </p>
           </div>
         </div>
@@ -195,7 +229,7 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
-              <strong>Penilaian tersimpan!</strong> Skor TOPSIS & poin Borda Anda sudah masuk ke database.
+              <strong>Penilaian tersimpan!</strong> Pilihan prioritas Anda sudah masuk ke database.
             </span>
           </div>
           <button
@@ -209,44 +243,26 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
         </div>
       )}
 
-      {/* Single Compact Criteria Weight Bar */}
-      <div className="flex flex-wrap items-center gap-2 px-3.5 py-2.5 rounded-lg bg-[#f9fafb] border border-neutral-200 text-[11px]">
-        <span className="font-semibold text-neutral-500 mr-1">Bobot TOPSIS:</span>
-        {TOPSIS_CRITERIA.map((c) => (
-          <span
-            key={c.id}
-            title={c.description}
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-white border border-neutral-200 text-neutral-700"
-          >
-            <strong className="font-mono text-neutral-900">{c.code}</strong>
-            <span>{c.shortName}</span>
-            <span className="text-neutral-400 font-mono">
-              {Math.round(c.weight * 100)}%
-            </span>
-            {c.type === 'COST' && (
-              <span className="px-1 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[9px] font-bold">
-                COST
-              </span>
-            )}
-          </span>
-        ))}
-      </div>
-
-      {/* Clean Scoring Table */}
+      {/* Single Clean Matrix Table (One Header, Zero Repetition) */}
       <div className="rounded-lg border border-neutral-200 bg-white overflow-x-auto shadow-2xs">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#f9fafb] border-b border-neutral-200 text-[11px] font-semibold text-neutral-500">
+          <thead className="bg-[#f9fafb] border-b border-neutral-200 text-[11px] font-semibold text-neutral-600">
             <tr>
-              <th className="py-2.5 px-3.5">Program Kerja</th>
-              {TOPSIS_CRITERIA.map((c) => (
-                <th key={c.id} className="py-2.5 px-2.5 whitespace-nowrap">
-                  <span>{c.code}: {c.shortName}</span>
-                  <span className="ml-1 font-normal text-neutral-400">
-                    ({Math.round(c.weight * 100)}%)
-                  </span>
-                </th>
-              ))}
-              <th className="py-2.5 px-3.5 text-right whitespace-nowrap">Hasil TOPSIS</th>
+              <th className="py-2.5 px-4">Program Kerja</th>
+              {TOPSIS_CRITERIA.map((c) => {
+                const meta = CRITERION_META[c.id];
+                return (
+                  <th key={c.id} className="py-2.5 px-2.5 whitespace-nowrap">
+                    <div className={c.type === 'COST' ? 'text-amber-700' : 'text-neutral-700'}>
+                      {meta.header}
+                    </div>
+                    <div className="text-[10px] font-normal text-neutral-400">
+                      {meta.sub}
+                    </div>
+                  </th>
+                );
+              })}
+              <th className="py-2.5 px-4 text-right whitespace-nowrap">Prioritas</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 text-neutral-700">
@@ -266,7 +282,7 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
                       : 'hover:bg-neutral-50/80'
                   }`}
                 >
-                  <td className="py-3 px-3.5 min-w-[230px]">
+                  <td className="py-3 px-4 min-w-[230px]">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono shrink-0">
                         {proker.code}
@@ -281,20 +297,25 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
                   </td>
 
                   {TOPSIS_CRITERIA.map((c) => {
-                    const options = c.type === 'COST' ? COST_OPTIONS : BENEFIT_OPTIONS;
+                    const meta = CRITERION_META[c.id];
+                    const isCost = c.type === 'COST';
                     return (
                       <td key={c.id} className="py-3 px-2.5 whitespace-nowrap">
                         <select
-                          aria-label={`${c.code} ${c.name} untuk ${proker.name}`}
+                          aria-label={`${meta.header} untuk ${proker.name}`}
                           value={rowScores[c.id]}
                           onChange={(e) =>
                             handleScoreChange(proker.id, c.id, Number(e.target.value))
                           }
-                          className="h-8 px-2 rounded border border-neutral-200 bg-white hover:border-neutral-300 focus:outline-none focus:border-purple-500 text-xs font-medium text-neutral-800 cursor-pointer"
+                          className={`h-8 px-2 rounded border bg-white text-xs font-medium text-neutral-800 focus:outline-none cursor-pointer ${
+                            isCost
+                              ? 'border-amber-200 hover:border-amber-300 focus:border-amber-500'
+                              : 'border-neutral-200 hover:border-neutral-300 focus:border-purple-500'
+                          }`}
                         >
-                          {options.map((opt) => (
+                          {meta.options.map((opt) => (
                             <option key={opt.value} value={opt.value}>
-                              {opt.label}
+                              {opt.text}
                             </option>
                           ))}
                         </select>
@@ -302,7 +323,7 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
                     );
                   })}
 
-                  <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     {hasScoreVariation ? (
                       <div className="inline-flex items-center gap-2 justify-end">
                         <div className="text-right">
@@ -310,7 +331,7 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
                             +{bordaPts} pts
                           </div>
                           <div className="text-[10px] font-mono text-neutral-400">
-                            V = {vScore.toFixed(3)}
+                            V={vScore.toFixed(2)}
                           </div>
                         </div>
                         <span
@@ -328,9 +349,7 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
                         </span>
                       </div>
                     ) : (
-                      <span className="text-[11px] text-neutral-400 font-mono">
-                        V = 0.000
-                      </span>
+                      <span className="text-xs font-mono text-neutral-400">—</span>
                     )}
                   </td>
                 </tr>
@@ -340,7 +359,7 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
         </table>
       </div>
 
-      {/* Footer Actions + Optional TOPSIS Breakdown Toggle */}
+      {/* Footer Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
         <button
           type="button"
@@ -348,7 +367,7 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
           className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-purple-700 transition-colors cursor-pointer"
         >
           <Calculator className="w-3.5 h-3.5" />
-          <span>{showSteps ? 'Sembunyikan' : 'Lihat'} detail hitungan TOPSIS</span>
+          <span>{showSteps ? 'Sembunyikan' : 'Lihat'} rincian matematis TOPSIS</span>
           {showSteps ? (
             <ChevronUp className="w-3.5 h-3.5" />
           ) : (
@@ -371,14 +390,14 @@ const VotingListForm: React.FC<VotingListFormProps> = ({
         <div className="rounded-lg border border-neutral-200 bg-[#f9fafb] p-4 space-y-3 text-xs">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
             <div className="p-2.5 rounded bg-white border border-emerald-200">
-              <span className="font-bold text-emerald-800 mr-2">Ideal Positif (A⁺):</span>
+              <span className="font-bold text-emerald-800 mr-2">Solusi Ideal Positif (A⁺):</span>
               <span className="font-mono text-emerald-700">
                 {liveTopsis.idealPositive.c1.toFixed(3)} • {liveTopsis.idealPositive.c2.toFixed(3)} •{' '}
                 {liveTopsis.idealPositive.c3.toFixed(3)} • {liveTopsis.idealPositive.c4.toFixed(3)}
               </span>
             </div>
             <div className="p-2.5 rounded bg-white border border-rose-200">
-              <span className="font-bold text-rose-800 mr-2">Ideal Negatif (A⁻):</span>
+              <span className="font-bold text-rose-800 mr-2">Solusi Ideal Negatif (A⁻):</span>
               <span className="font-mono text-rose-700">
                 {liveTopsis.idealNegative.c1.toFixed(3)} • {liveTopsis.idealNegative.c2.toFixed(3)} •{' '}
                 {liveTopsis.idealNegative.c3.toFixed(3)} • {liveTopsis.idealNegative.c4.toFixed(3)}

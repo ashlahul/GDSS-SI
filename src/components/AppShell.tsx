@@ -18,6 +18,8 @@ import {
   User,
   RotateCw,
   Crown,
+  Users,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -34,14 +36,15 @@ interface NavItem {
 
 const MAIN_NAV_ITEMS: NavItem[] = [
   { id: 'overview', label: 'Dashboard GDSS', icon: LayoutDashboard },
+  { id: 'members', label: 'Kelola Anggota', icon: Users },
   { id: 'proker', label: 'Alternatif Proker', icon: FolderKanban },
   { id: 'voting', label: 'Penilaian Saya', icon: ListOrdered },
 ];
 
 const CONSENSUS_NAV_ITEMS: NavItem[] = [
-  { id: 'consensus', label: 'Konsensus Borda', icon: Scale },
+  { id: 'consensus', label: 'Konsensus Keputusan', icon: Scale },
   { id: 'results', label: 'Hasil & Berita Acara', icon: Trophy },
-  { id: 'guide', label: 'Alur & TOPSIS + Borda', icon: BookOpen },
+  { id: 'guide', label: 'Panduan Metode', icon: BookOpen },
 ];
 
 const COLLAPSED_STORAGE_KEY = 'gdss_sidebar_collapsed';
@@ -279,7 +282,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     setHoveredCollapsedIndex(null);
   };
 
-  const filteredMain = MAIN_NAV_ITEMS.filter((item) =>
+  const isAdmin = currentUser.role === 'ADMIN';
+  const roleMainItems = MAIN_NAV_ITEMS.filter((item) =>
+    isAdmin ? item.id !== 'voting' : item.id !== 'members'
+  );
+  const filteredMain = roleMainItems.filter((item) =>
     item.label.toLowerCase().includes(sidebarSearch.trim().toLowerCase())
   );
   const filteredConsensus = CONSENSUS_NAV_ITEMS.filter((item) =>
@@ -496,15 +503,12 @@ export const AppShell: React.FC<AppShellProps> = ({
                 {!isCollapsed && (
                   <div className="flex flex-col min-w-0 text-left">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-bold tracking-tight text-neutral-900 group-hover:text-purple-700 transition-colors">
+                      <span className="text-sm font-bold tracking-tight text-neutral-900 group-hover:text-purple-700 transition-colors whitespace-nowrap">
                         GDSS Ormawa
                       </span>
-                      <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-purple-100/70 text-purple-700 border border-purple-200/50">
-                        TOPSIS
-                      </span>
                     </div>
-                    <span className="text-[10px] text-neutral-400 font-medium truncate max-w-[130px]">
-                      Prioritas Program Kerja
+                    <span className="text-[10px] text-neutral-400 font-medium truncate max-w-[140px]">
+                      TOPSIS + Borda • Proker
                     </span>
                   </div>
                 )}
@@ -854,7 +858,9 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="relative shrink-0">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-600 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-xs group-hover:scale-105 transition-transform duration-200">
-                      {currentUser.isHighestRole ? (
+                      {currentUser.role === 'ADMIN' ? (
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-200" />
+                      ) : currentUser.isHighestRole ? (
                         <Crown className="w-3.5 h-3.5 text-amber-200" />
                       ) : (
                         userInitial
@@ -895,7 +901,9 @@ export const AppShell: React.FC<AppShellProps> = ({
               >
                 <div className="relative">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 via-indigo-600 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-xs group-hover:scale-110 group-hover:shadow-md transition-all duration-200">
-                    {currentUser.isHighestRole ? (
+                    {currentUser.role === 'ADMIN' ? (
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-200" />
+                    ) : currentUser.isHighestRole ? (
                       <Crown className="w-3.5 h-3.5 text-amber-200" />
                     ) : (
                       userInitial

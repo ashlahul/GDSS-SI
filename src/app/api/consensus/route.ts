@@ -1,22 +1,25 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getFullGDSSState } from '@/lib/gdss-server';
+import { getFullGDSSState, ROLE_ORDER } from '@/lib/gdss-server';
+import { ConsensusMemberScore, RoleType } from '@/types/gdss';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { userId } = body as { userId: string };
 
-    const executor = await prisma.decisionMaker.findUnique({
-      where: { id: userId },
-    });
+    const executor = userId
+      ? await prisma.decisionMaker.findUnique({
+          where: { id: userId },
+        })
+      : null;
 
-    if (!executor || !executor.isHighestRole) {
+    if (!executor || !executor.isHighestRole || executor.role === 'ADMIN') {
       return NextResponse.json(
         {
           success: false,
           message:
-            'Akses Ditolak: Hanya pengambil keputusan dengan jabatan tertinggi (Ketua) yang berhak mengesahkan konsensus Borda.',
+            'Akses Ditolak: Hanya pengambil keputusan dengan jabatan tertinggi (Ketua) yang berhak mengesahkan konsensus.',
         },
         { status: 403 }
       );
@@ -28,17 +31,26 @@ export async function POST(req: Request) {
       prisma.vote.findMany(),
     ]);
 
-    if (prokers.length === 0) {
+    const voters = dms
+      .filter((d) => d.role !== 'ADMIN')
+      .sort((a, b) => {
+        const diff =
+          (ROLE_ORDER[a.role as RoleType] ?? 50) -
+          (ROLE_ORDER[b.role as RoleType] ?? 50);
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      });
+
+    if (prokers.length === 0 || voters.length === 0) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Tidak ada alternatif program kerja untuk dinilai.',
+          message: 'Tidak ada alternatif program kerja atau penilai untuk disahkan.',
         },
         { status: 400 }
       );
     }
 
-    const allReady = dms.every((dm) => {
+    const allReady = voters.every((dm) => {
       const dmVotes = votes.filter((v) => v.decisionMakerId === dm.id);
       return dmVotes.length === prokers.length;
     });
@@ -55,49 +67,62 @@ export async function POST(req: Request) {
     }
 
     const n = prokers.length;
-    const ketuaVotes = votes.filter((v) => v.decisionMakerId === 'dm-ketua');
-    const wakilVotes = votes.filter((v) => v.decisionMakerId === 'dm-wakil');
-    const sekVotes = votes.filter((v) => v.decisionMakerId === 'dm-sekretaris');
-    const bendVotes = votes.filter((v) => v.decisionMakerId === 'dm-bendahara');
 
     const calculatedRows = prokers.map((proker) => {
-      const kVote = ketuaVotes.find((v) => v.prokerId === proker.id);
-      const kRank = kVote?.rank ?? n;
-      const kPoints = n - kRank + 1;
-      const kTopsis = kVote?.topsisScore ?? 0;
+      const memberScores: ConsensusMemberScore[] = voters.map((dm) => {
+        const v = votes.find(
+          (item) => item.decisionMakerId === dm.id && item.prokerId === proker.id
+        );
+        const rank = v?.rank ?? n;
+        const bordaPoints = n - rank + 1;
+        const topsisScore = v?.topsisScore ?? 0;
 
-      const wVote = wakilVotes.find((v) => v.prokerId === proker.id);
-      const wRank = wVote?.rank ?? n;
-      const wPoints = n - wRank + 1;
-      const wTopsis = wVote?.topsisScore ?? 0;
+        return {
+          dmId: dm.id,
+          dmName: dm.name,
+          dmNim: dm.nim,
+          role: dm.role as RoleType,
+          roleLabel: dm.roleLabel,
+          rank,
+          bordaPoints,
+          topsisScore,
+        };
+      });
 
-      const sVote = sekVotes.find((v) => v.prokerId === proker.id);
-      const sRank = sVote?.rank ?? n;
-      const sPoints = n - sRank + 1;
-      const sTopsis = sVote?.topsisScore ?? 0;
+      const findByRole = (r: RoleType) => memberScores.find((m) => m.role === r);
+      const ketua = findByRole('KETUA');
+      const wakil = findByRole('WAKIL_KETUA');
+      const sek = findByRole('SEKRETARIS');
+      const bend = findByRole('BENDAHARA');
 
-      const bVote = bendVotes.find((v) => v.prokerId === proker.id);
-      const bRank = bVote?.rank ?? n;
-      const bPoints = n - bRank + 1;
-      const bTopsis = bVote?.topsisScore ?? 0;
+      const totalBordaPoints = memberScores.reduce(
+        (acc, m) => acc + m.bordaPoints,
+        0
+      );
+      const totalTopsisSum = memberScores.reduce(
+        (acc, m) => acc + m.topsisScore,
+        0
+      );
 
       return {
         prokerId: proker.id,
-        ketuaRank: kRank,
-        ketuaPoints: kPoints,
-        ketuaTopsis: kTopsis,
-        wakilRank: wRank,
-        wakilPoints: wPoints,
-        wakilTopsis: wTopsis,
-        sekretarisRank: sRank,
-        sekretarisPoints: sPoints,
-        sekretarisTopsis: sTopsis,
-        bendaharaRank: bRank,
-        bendaharaPoints: bPoints,
-        bendaharaTopsis: bTopsis,
-        totalBordaPoints: kPoints + wPoints + sPoints + bPoints,
+        ketuaRank: ketua?.rank ?? 0,
+        ketuaPoints: ketua?.bordaPoints ?? 0,
+        ketuaTopsis: ketua?.topsisScore ?? 0,
+        wakilRank: wakil?.rank ?? 0,
+        wakilPoints: wakil?.bordaPoints ?? 0,
+        wakilTopsis: wakil?.topsisScore ?? 0,
+        sekretarisRank: sek?.rank ?? 0,
+        sekretarisPoints: sek?.bordaPoints ?? 0,
+        sekretarisTopsis: sek?.topsisScore ?? 0,
+        bendaharaRank: bend?.rank ?? 0,
+        bendaharaPoints: bend?.bordaPoints ?? 0,
+        bendaharaTopsis: bend?.topsisScore ?? 0,
+        memberScoresJson: JSON.stringify(memberScores),
+        totalBordaPoints,
         finalRank: 0,
         statusRecommendation: 'Prioritas Kedua',
+        _totalTopsisSum: totalTopsisSum,
       };
     });
 
@@ -109,22 +134,21 @@ export async function POST(req: Request) {
       if (b.ketuaPoints !== a.ketuaPoints) {
         return b.ketuaPoints - a.ketuaPoints;
       }
-      const aTopsisSum =
-        a.ketuaTopsis + a.wakilTopsis + a.sekretarisTopsis + a.bendaharaTopsis;
-      const bTopsisSum =
-        b.ketuaTopsis + b.wakilTopsis + b.sekretarisTopsis + b.bendaharaTopsis;
-      return bTopsisSum - aTopsisSum;
+      return b._totalTopsisSum - a._totalTopsisSum;
     });
 
-    calculatedRows.forEach((row, index) => {
-      row.finalRank = index + 1;
+    const persistRows = calculatedRows.map((row, index) => {
+      const { _totalTopsisSum, ...cleanRow } = row;
+      void _totalTopsisSum;
+      cleanRow.finalRank = index + 1;
       if (index === 0 || index === 1) {
-        row.statusRecommendation = 'Prioritas Utama';
+        cleanRow.statusRecommendation = 'Prioritas Utama';
       } else if (index < Math.ceil(calculatedRows.length * 0.6)) {
-        row.statusRecommendation = 'Prioritas Kedua';
+        cleanRow.statusRecommendation = 'Prioritas Kedua';
       } else {
-        row.statusRecommendation = 'Dipertimbangkan / Cadangan';
+        cleanRow.statusRecommendation = 'Dipertimbangkan / Cadangan';
       }
+      return cleanRow;
     });
 
     await prisma.$transaction([
@@ -134,7 +158,7 @@ export async function POST(req: Request) {
           authorizedById: executor.id,
           authorizedByName: executor.name,
           details: {
-            create: calculatedRows,
+            create: persistRows,
           },
         },
       }),
@@ -144,7 +168,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message:
-        'Konsensus pengambilan keputusan dengan Metode Borda berhasil disahkan oleh Ketua.',
+        'Konsensus pengambilan keputusan (TOPSIS + Borda) berhasil disahkan oleh Ketua.',
       state,
     });
   } catch (error) {

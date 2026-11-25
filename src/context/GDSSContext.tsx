@@ -18,6 +18,17 @@ import {
 } from '@/types/gdss';
 import { TopsisScoreInput } from '@/lib/topsis';
 
+export const FALLBACK_ADMIN: DecisionMaker = {
+  id: 'dm-admin',
+  name: 'Administrator GDSS',
+  nim: '-',
+  email: 'admin@gmail.com',
+  role: 'ADMIN',
+  roleLabel: 'Administrator Sistem',
+  isHighestRole: false,
+  avatarColor: 'bg-neutral-800',
+};
+
 export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
   {
     id: 'dm-ketua',
@@ -61,7 +72,17 @@ export const FALLBACK_DECISION_MAKERS: DecisionMaker[] = [
   },
 ];
 
+export interface MemberInputPayload {
+  name: string;
+  nim: string;
+  email: string;
+  password?: string;
+  role: RoleType;
+  roleLabel: string;
+}
+
 interface GDSSContextType {
+  accounts: DecisionMaker[];
   decisionMakers: DecisionMaker[];
   isAuthenticated: boolean;
   currentUser: DecisionMaker;
@@ -70,6 +91,14 @@ interface GDSSContextType {
     password: string
   ) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
+  addMember: (
+    payload: MemberInputPayload
+  ) => Promise<{ success: boolean; message?: string }>;
+  updateMember: (
+    id: string,
+    payload: Partial<MemberInputPayload>
+  ) => Promise<{ success: boolean; message?: string }>;
+  deleteMember: (id: string) => Promise<{ success: boolean; message?: string }>;
   programKerjaList: ProgramKerja[];
   addProker: (proker: Omit<ProgramKerja, 'id' | 'code'>) => Promise<void>;
   updateProker: (id: string, proker: Partial<ProgramKerja>) => Promise<void>;
@@ -88,22 +117,25 @@ interface GDSSContextType {
 
 const GDSSContext = createContext<GDSSContextType | undefined>(undefined);
 
-const SESSION_STORAGE_KEY = 'gdss_ormawa_session_v3';
+const SESSION_STORAGE_KEY = 'gdss_ormawa_session_v4';
 
-function loadSession(): { isAuthenticated: boolean; currentUserRole: RoleType } {
+function loadSession(): {
+  isAuthenticated: boolean;
+  currentUserId: string;
+} {
   try {
     const saved = localStorage.getItem(SESSION_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
         isAuthenticated: Boolean(parsed.isAuthenticated),
-        currentUserRole: parsed.currentUserRole || 'KETUA',
+        currentUserId: parsed.currentUserId || 'dm-ketua',
       };
     }
   } catch (e) {
     console.error('Failed to read session', e);
   }
-  return { isAuthenticated: false, currentUserRole: 'KETUA' };
+  return { isAuthenticated: false, currentUserId: 'dm-ketua' };
 }
 
 const emptySubscribe = () => () => {};
@@ -115,10 +147,14 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
     initialSession.isAuthenticated
   );
-  const [currentUserRole, setCurrentUserRole] = useState<RoleType>(
-    initialSession.currentUserRole
+  const [currentUserId, setCurrentUserId] = useState<string>(
+    initialSession.currentUserId
   );
 
+  const [accounts, setAccounts] = useState<DecisionMaker[]>([
+    ...FALLBACK_DECISION_MAKERS,
+    FALLBACK_ADMIN,
+  ]);
   const [decisionMakers, setDecisionMakers] = useState<DecisionMaker[]>(
     FALLBACK_DECISION_MAKERS
   );
@@ -134,20 +170,22 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       localStorage.setItem(
         SESSION_STORAGE_KEY,
-        JSON.stringify({ isAuthenticated, currentUserRole })
+        JSON.stringify({ isAuthenticated, currentUserId })
       );
     } catch (e) {
       console.error('Failed to save session', e);
     }
-  }, [isAuthenticated, currentUserRole]);
+  }, [isAuthenticated, currentUserId]);
 
   const applyServerState = useCallback(
     (data: {
+      accounts?: DecisionMaker[];
       decisionMakers?: DecisionMaker[];
       programKerjaList?: ProgramKerja[];
       votes?: Record<string, DecisionMakerVote>;
       consensusResult?: ConsensusRecord | null;
     }) => {
+      if (data.accounts?.length) setAccounts(data.accounts);
       if (data.decisionMakers?.length) setDecisionMakers(data.decisionMakers);
       if (data.programKerjaList) setProgramKerjaList(data.programKerjaList);
       if (data.votes) setVotes(data.votes);
@@ -208,10 +246,11 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const currentUser = useMemo(() => {
     return (
-      decisionMakers.find((dm) => dm.role === currentUserRole) ||
-      decisionMakers[0]
+      accounts.find((acc) => acc.id === currentUserId) ||
+      decisionMakers[0] ||
+      FALLBACK_DECISION_MAKERS[0]
     );
-  }, [decisionMakers, currentUserRole]);
+  }, [accounts, decisionMakers, currentUserId]);
 
   const loginWithCredentials = async (email: string, password: string) => {
     try {
@@ -226,10 +265,10 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
           success: false,
           message:
             data.message ||
-            'Email atau kata sandi tidak sesuai dengan akun Decision Maker terdaftar.',
+            'Email atau kata sandi tidak sesuai dengan akun terdaftar.',
         };
       }
-      setCurrentUserRole(data.user.role as RoleType);
+      setCurrentUserId(data.user.id);
       setIsAuthenticated(true);
       await refreshData();
       return { success: true, message: data.message };
@@ -243,6 +282,59 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = () => {
     setIsAuthenticated(false);
+  };
+
+  const addMember = async (payload: MemberInputPayload) => {
+    try {
+      const res = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, actorId: currentUser.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, message: data.error || 'Gagal menambahkan anggota.' };
+      }
+      applyServerState(data);
+      return { success: true, message: 'Anggota berhasil ditambahkan.' };
+    } catch {
+      return { success: false, message: 'Gagal terhubung ke server.' };
+    }
+  };
+
+  const updateMember = async (id: string, payload: Partial<MemberInputPayload>) => {
+    try {
+      const res = await fetch(`/api/members/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, actorId: currentUser.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, message: data.error || 'Gagal memperbarui anggota.' };
+      }
+      applyServerState(data);
+      return { success: true, message: 'Data anggota berhasil diperbarui.' };
+    } catch {
+      return { success: false, message: 'Gagal terhubung ke server.' };
+    }
+  };
+
+  const deleteMember = async (id: string) => {
+    try {
+      const res = await fetch(
+        `/api/members/${id}?actorId=${encodeURIComponent(currentUser.id)}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, message: data.error || 'Gagal menghapus anggota.' };
+      }
+      applyServerState(data);
+      return { success: true, message: 'Anggota berhasil dihapus.' };
+    } catch {
+      return { success: false, message: 'Gagal terhubung ke server.' };
+    }
   };
 
   const addProker = async (data: Omit<ProgramKerja, 'id' | 'code'>) => {
@@ -284,7 +376,7 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const isConsensusReady = useMemo(() => {
-    if (programKerjaList.length === 0) return false;
+    if (programKerjaList.length === 0 || decisionMakers.length === 0) return false;
     return decisionMakers.every((dm) => {
       const v = votes[dm.id];
       return v && v.submittedAt && v.rankings.length === programKerjaList.length;
@@ -324,11 +416,15 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
   return (
     <GDSSContext.Provider
       value={{
+        accounts,
         decisionMakers,
         isAuthenticated,
         currentUser,
         loginWithCredentials,
         logout,
+        addMember,
+        updateMember,
+        deleteMember,
         programKerjaList,
         addProker,
         updateProker,
@@ -351,11 +447,15 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 const SSR_FALLBACK_VALUE: GDSSContextType = {
+  accounts: [...FALLBACK_DECISION_MAKERS, FALLBACK_ADMIN],
   decisionMakers: FALLBACK_DECISION_MAKERS,
   isAuthenticated: false,
   currentUser: FALLBACK_DECISION_MAKERS[0],
   loginWithCredentials: async () => ({ success: false, message: '' }),
   logout: () => {},
+  addMember: async () => ({ success: false }),
+  updateMember: async () => ({ success: false }),
+  deleteMember: async () => ({ success: false }),
   programKerjaList: [],
   addProker: async () => {},
   updateProker: async () => {},

@@ -6,6 +6,7 @@ import { LoginView } from '@/components/LoginView';
 import { AppShell } from '@/components/AppShell';
 import { OverviewTab } from '@/components/tabs/OverviewTab';
 import { ProkerTab } from '@/components/tabs/ProkerTab';
+import { MembersTab } from '@/components/tabs/MembersTab';
 import { VotingTab } from '@/components/tabs/VotingTab';
 import { ConsensusTab } from '@/components/tabs/ConsensusTab';
 import { ResultsTab } from '@/components/tabs/ResultsTab';
@@ -13,8 +14,14 @@ import { MethodGuideTab } from '@/components/tabs/MethodGuideTab';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function Home() {
-  const { isHydrated, isAuthenticated, isLoadingData, dbError, refreshData } =
-    useGDSS();
+  const {
+    isHydrated,
+    isAuthenticated,
+    currentUser,
+    isLoadingData,
+    dbError,
+    refreshData,
+  } = useGDSS();
   const [activeTab, setActiveTab] = useState<string>('overview');
 
   if (!isHydrated) {
@@ -34,8 +41,15 @@ export default function Home() {
     return <LoginView />;
   }
 
+  const effectiveTab =
+    currentUser.role === 'ADMIN' && activeTab === 'voting'
+      ? 'members'
+      : currentUser.role !== 'ADMIN' && activeTab === 'members'
+      ? 'overview'
+      : activeTab;
+
   return (
-    <AppShell activeTab={activeTab} setActiveTab={setActiveTab}>
+    <AppShell activeTab={effectiveTab} setActiveTab={setActiveTab}>
       {dbError && (
         <div className="m-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs print:hidden">
           <div className="flex items-start gap-3">
@@ -63,20 +77,21 @@ export default function Home() {
         </div>
       ) : (
         <>
-          {activeTab === 'overview' && (
+          {effectiveTab === 'overview' && (
             <OverviewTab onNavigate={(tab) => setActiveTab(tab)} />
           )}
-          {activeTab === 'proker' && <ProkerTab />}
-          {activeTab === 'voting' && (
+          {effectiveTab === 'members' && <MembersTab />}
+          {effectiveTab === 'proker' && <ProkerTab />}
+          {effectiveTab === 'voting' && (
             <VotingTab onNavigateToConsensus={() => setActiveTab('consensus')} />
           )}
-          {activeTab === 'consensus' && (
+          {effectiveTab === 'consensus' && (
             <ConsensusTab onNavigateToResults={() => setActiveTab('results')} />
           )}
-          {activeTab === 'results' && (
+          {effectiveTab === 'results' && (
             <ResultsTab onNavigateToConsensus={() => setActiveTab('consensus')} />
           )}
-          {activeTab === 'guide' && (
+          {effectiveTab === 'guide' && (
             <MethodGuideTab onNavigate={(tab) => setActiveTab(tab)} />
           )}
         </>

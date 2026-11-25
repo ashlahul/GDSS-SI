@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ConsensusRecord, DecisionMaker } from '@/types/gdss';
+import { getRowMemberScores } from '@/lib/consensus-helpers';
 
 interface PrintBeritaAcaraProps {
   consensusResult: ConsensusRecord;
@@ -12,10 +13,9 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
   consensusResult,
   decisionMakers,
 }) => {
-  const ketua = decisionMakers.find((d) => d.role === 'KETUA');
-  const wakil = decisionMakers.find((d) => d.role === 'WAKIL_KETUA');
-  const sekretaris = decisionMakers.find((d) => d.role === 'SEKRETARIS');
-  const bendahara = decisionMakers.find((d) => d.role === 'BENDAHARA');
+  const details = consensusResult.details;
+  const memberCols =
+    details.length > 0 ? getRowMemberScores(details[0], decisionMakers) : [];
 
   const formattedDate = new Date(consensusResult.calculatedAt).toLocaleDateString(
     'id-ID',
@@ -33,6 +33,10 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
       currency: 'IDR',
       maximumFractionDigits: 0,
     }).format(val);
+
+  const memberRolesSummary = memberCols
+    .map((m) => `${m.dmName} (${m.roleLabel.replace(' (Jabatan Tertinggi)', '')})`)
+    .join(', ');
 
   return (
     <div id="print-berita-acara" className="hidden print:block bg-white text-black p-8 max-w-4xl mx-auto text-sm leading-relaxed">
@@ -73,9 +77,9 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
         secara kolektif menggunakan Sistem Pendukung Keputusan Kelompok (GDSS) berbasis website dengan
         metode gabungan <strong>Hybrid TOPSIS & Borda Count</strong> (evaluasi multi-kriteria
         individu menggunakan <em>TOPSIS</em> dan agregasi konsensus kelompok menggunakan{' '}
-        <em>Metode Borda</em>). Penilaian telah diberikan secara independen oleh seluruh pengambil
-        keputusan (Decision Maker), yaitu Ketua Umum, Wakil Ketua Umum, Sekretaris Jenderal, dan
-        Bendahara Umum, dan telah disahkan secara resmi melalui akun jabatan tertinggi oleh{' '}
+        <em>Metode Borda</em>). Penilaian telah diberikan secara independen oleh seluruh{' '}
+        {memberCols.length} pengambil keputusan (Decision Maker), yaitu {memberRolesSummary}, dan
+        telah disahkan secara resmi melalui akun jabatan tertinggi oleh{' '}
         <strong>{consensusResult.authorizedBy} (Ketua Umum)</strong>.
       </p>
 
@@ -86,60 +90,50 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
             <th className="border border-black p-2 text-center">Peringkat</th>
             <th className="border border-black p-2 text-left">Kode & Nama Program Kerja</th>
             <th className="border border-black p-2 text-right">Est. Anggaran</th>
-            <th className="border border-black p-2 text-center">Ketua</th>
-            <th className="border border-black p-2 text-center">Wakil Ketua</th>
-            <th className="border border-black p-2 text-center">Sekretaris</th>
-            <th className="border border-black p-2 text-center">Bendahara</th>
+            {memberCols.map((m) => (
+              <th key={m.dmId} className="border border-black p-2 text-center">
+                {m.dmName.split(' ')[0]}
+              </th>
+            ))}
             <th className="border border-black p-2 text-center">Total Poin</th>
             <th className="border border-black p-2 text-left">Status Keputusan</th>
           </tr>
         </thead>
         <tbody>
-          {consensusResult.details.map((row) => (
-            <tr key={row.proker.id}>
-              <td className="border border-black p-2 text-center font-bold">
-                #{row.finalRank}
-              </td>
-              <td className="border border-black p-2">
-                <strong>{row.proker.code}</strong> - {row.proker.name}
-                <br />
-                <span className="text-[10px] text-gray-600">{row.proker.divisi}</span>
-              </td>
-              <td className="border border-black p-2 text-right whitespace-nowrap">
-                {formatRupiah(row.proker.anggaran)}
-              </td>
-              <td className="border border-black p-2 text-center">
-                <div>Rank {row.ketuaRank} ({row.ketuaPoints})</div>
-                <div className="text-[10px] font-mono text-gray-600">
-                  V={row.ketuaTopsis.toFixed(3)}
-                </div>
-              </td>
-              <td className="border border-black p-2 text-center">
-                <div>Rank {row.wakilRank} ({row.wakilPoints})</div>
-                <div className="text-[10px] font-mono text-gray-600">
-                  V={row.wakilTopsis.toFixed(3)}
-                </div>
-              </td>
-              <td className="border border-black p-2 text-center">
-                <div>Rank {row.sekretarisRank} ({row.sekretarisPoints})</div>
-                <div className="text-[10px] font-mono text-gray-600">
-                  V={row.sekretarisTopsis.toFixed(3)}
-                </div>
-              </td>
-              <td className="border border-black p-2 text-center">
-                <div>Rank {row.bendaharaRank} ({row.bendaharaPoints})</div>
-                <div className="text-[10px] font-mono text-gray-600">
-                  V={row.bendaharaTopsis.toFixed(3)}
-                </div>
-              </td>
-              <td className="border border-black p-2 text-center font-bold">
-                {row.totalBordaPoints}
-              </td>
-              <td className="border border-black p-2 font-semibold">
-                {row.statusRecommendation}
-              </td>
-            </tr>
-          ))}
+          {details.map((row) => {
+            const rowMembers = getRowMemberScores(row, decisionMakers);
+            return (
+              <tr key={row.proker.id}>
+                <td className="border border-black p-2 text-center font-bold">
+                  #{row.finalRank}
+                </td>
+                <td className="border border-black p-2">
+                  <strong>{row.proker.code}</strong> - {row.proker.name}
+                  <br />
+                  <span className="text-[10px] text-gray-600">{row.proker.divisi}</span>
+                </td>
+                <td className="border border-black p-2 text-right whitespace-nowrap">
+                  {formatRupiah(row.proker.anggaran)}
+                </td>
+                {rowMembers.map((m) => (
+                  <td key={m.dmId} className="border border-black p-2 text-center">
+                    <div>
+                      Rank {m.rank} ({m.bordaPoints})
+                    </div>
+                    <div className="text-[10px] font-mono text-gray-600">
+                      V={m.topsisScore.toFixed(3)}
+                    </div>
+                  </td>
+                ))}
+                <td className="border border-black p-2 text-center font-bold">
+                  {row.totalBordaPoints}
+                </td>
+                <td className="border border-black p-2 font-semibold">
+                  {row.statusRecommendation}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
@@ -151,43 +145,23 @@ export const PrintBeritaAcara: React.FC<PrintBeritaAcaraProps> = ({
       </p>
 
       {/* Tanda Tangan */}
-      <div className="grid grid-cols-4 gap-4 text-center text-xs mt-12">
-        <div>
-          <p className="mb-16">
-            Pengambil Keputusan I (Tertinggi),
-            <br />
-            <strong>Ketua Umum</strong>
-          </p>
-          <p className="font-bold underline">{ketua?.name}</p>
-          {ketua?.nim && <p className="text-[11px] font-mono mt-0.5">NIM. {ketua.nim}</p>}
-        </div>
-        <div>
-          <p className="mb-16">
-            Pengambil Keputusan II,
-            <br />
-            <strong>Wakil Ketua Umum</strong>
-          </p>
-          <p className="font-bold underline">{wakil?.name}</p>
-          {wakil?.nim && <p className="text-[11px] font-mono mt-0.5">NIM. {wakil.nim}</p>}
-        </div>
-        <div>
-          <p className="mb-16">
-            Pengambil Keputusan III,
-            <br />
-            <strong>Sekretaris Jenderal</strong>
-          </p>
-          <p className="font-bold underline">{sekretaris?.name}</p>
-          {sekretaris?.nim && <p className="text-[11px] font-mono mt-0.5">NIM. {sekretaris.nim}</p>}
-        </div>
-        <div>
-          <p className="mb-16">
-            Pengambil Keputusan IV,
-            <br />
-            <strong>Bendahara Umum</strong>
-          </p>
-          <p className="font-bold underline">{bendahara?.name}</p>
-          {bendahara?.nim && <p className="text-[11px] font-mono mt-0.5">NIM. {bendahara.nim}</p>}
-        </div>
+      <div
+        className={`grid gap-4 text-center text-xs mt-12 ${
+          memberCols.length <= 3 ? 'grid-cols-3' : 'grid-cols-4'
+        }`}
+      >
+        {memberCols.map((m, idx) => (
+          <div key={m.dmId} className="break-inside-avoid">
+            <p className="mb-16">
+              Pengambil Keputusan {idx + 1}
+              {m.role === 'KETUA' ? ' (Tertinggi)' : ''},
+              <br />
+              <strong>{m.roleLabel.replace(' (Jabatan Tertinggi)', '')}</strong>
+            </p>
+            <p className="font-bold underline">{m.dmName}</p>
+            {m.dmNim && <p className="text-[11px] font-mono mt-0.5">NIM. {m.dmNim}</p>}
+          </div>
+        ))}
       </div>
     </div>
   );

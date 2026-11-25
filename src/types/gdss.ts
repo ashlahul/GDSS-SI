@@ -1,4 +1,10 @@
-export type RoleType = 'KETUA' | 'WAKIL_KETUA' | 'SEKRETARIS' | 'BENDAHARA';
+export type RoleType =
+  | 'ADMIN'
+  | 'KETUA'
+  | 'WAKIL_KETUA'
+  | 'SEKRETARIS'
+  | 'BENDAHARA'
+  | 'ANGGOTA';
 
 export interface DecisionMaker {
   id: string;
@@ -38,6 +44,17 @@ export interface DecisionMakerVote {
   rankings: IndividualRankingItem[];
 }
 
+export interface ConsensusMemberScore {
+  dmId: string;
+  dmName: string;
+  dmNim: string;
+  role: RoleType;
+  roleLabel: string;
+  rank: number;
+  bordaPoints: number;
+  topsisScore: number;
+}
+
 export interface BordaDetailRow {
   proker: ProgramKerja;
   ketuaRank: number;
@@ -52,6 +69,7 @@ export interface BordaDetailRow {
   bendaharaRank: number;
   bendaharaPoints: number;
   bendaharaTopsis: number;
+  memberScores: ConsensusMemberScore[];
   totalBordaPoints: number;
   finalRank: number;
   statusRecommendation: 'Prioritas Utama' | 'Prioritas Kedua' | 'Dipertimbangkan / Cadangan';

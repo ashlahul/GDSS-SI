@@ -20,12 +20,18 @@ export async function POST(req: Request) {
 
     const dm = await prisma.decisionMaker.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: { id: true, role: true },
     });
     if (!dm) {
       return NextResponse.json(
         { error: 'Akun pengambil keputusan tidak ditemukan.' },
         { status: 404 }
+      );
+    }
+    if (dm.role === 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Akun Administrator hanya mengelola anggota dan tidak ikut memberikan suara.' },
+        { status: 403 }
       );
     }
 

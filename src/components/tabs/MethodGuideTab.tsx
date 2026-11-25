@@ -40,7 +40,7 @@ export const MethodGuideTab: React.FC<{ onNavigate: (tab: string) => void }> = (
 
         <button
           type="button"
-          onClick={() => onNavigate('voting')}
+          onClick={() => onNavigate(decisionMakers.length ? 'voting' : 'overview')}
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition-colors shadow-2xs cursor-pointer self-start sm:self-auto"
         >
           <span>Ke Penilaian TOPSIS</span>
@@ -200,6 +200,8 @@ export const MethodGuideTab: React.FC<{ onNavigate: (tab: string) => void }> = (
                       'Menilai kesiapan administrasi, kalender kerja, dan sumber daya kader.'}
                     {dm.role === 'BENDAHARA' &&
                       'Menilai efisiensi anggaran, kelayakan dana, dan beban kas.'}
+                    {dm.role === 'ANGGOTA' &&
+                      'Memberikan penilaian TOPSIS independen sesuai perspektif divisi/anggotanya.'}
                   </p>
                 </div>
               </div>

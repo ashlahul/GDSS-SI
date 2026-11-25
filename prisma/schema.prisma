@@ -9,10 +9,12 @@ datasource db {
 }
 
 enum RoleType {
+  ADMIN
   KETUA
   WAKIL_KETUA
   SEKRETARIS
   BENDAHARA
+  ANGGOTA
 }
 
 model DecisionMaker {
@@ -21,7 +23,7 @@ model DecisionMaker {
   nim              String            @default("")
   email            String            @unique
   password         String
-  role             RoleType          @unique
+  role             RoleType
   roleLabel        String
   isHighestRole    Boolean           @default(false)
   avatarColor      String
@@ -85,6 +87,7 @@ model ConsensusDetail {
   bendaharaRank        Int
   bendaharaPoints      Int
   bendaharaTopsis      Float           @default(0)
+  memberScoresJson     String          @default("[]")
   totalBordaPoints     Int
   finalRank            Int
   statusRecommendation String

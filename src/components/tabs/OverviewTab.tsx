@@ -59,32 +59,25 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
   );
 
   const totalDMs = decisionMakers.length || 4;
+  const isAdmin = currentUser.role === 'ADMIN';
 
   const liveScores = useMemo(() => {
     const n = programKerjaList.length;
-    const kVotes = votes['dm-ketua']?.rankings || [];
-    const wVotes = votes['dm-wakil']?.rankings || [];
-    const sVotes = votes['dm-sekretaris']?.rankings || [];
-    const bVotes = votes['dm-bendahara']?.rankings || [];
 
     return programKerjaList.map((proker) => {
-      const kPts = kVotes.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
-      const wPts = wVotes.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
-      const sPts = sVotes.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
-      const bPts = bVotes.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
-      const total = kPts + wPts + sPts + bPts;
+      let total = 0;
+      for (const dm of decisionMakers) {
+        const dmRankings = votes[dm.id]?.rankings || [];
+        total += dmRankings.find((r) => r.prokerId === proker.id)?.bordaPoints || 0;
+      }
       const maxPts = Math.max(1, n * totalDMs);
       return {
         proker,
-        kPts,
-        wPts,
-        sPts,
-        bPts,
         total,
         pct: Math.round((total / maxPts) * 100),
       };
     });
-  }, [programKerjaList, votes, totalDMs]);
+  }, [programKerjaList, decisionMakers, votes, totalDMs]);
 
   const sortedLiveScores = useMemo(
     () => [...liveScores].sort((a, b) => b.total - a.total),
@@ -132,10 +125,17 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
 
           <button
             type="button"
-            onClick={() => onNavigate(consensusResult ? 'results' : 'voting')}
+            onClick={() =>
+              onNavigate(isAdmin ? 'members' : consensusResult ? 'results' : 'voting')
+            }
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
           >
-            {consensusResult ? (
+            {isAdmin ? (
+              <>
+                <Users className="w-3.5 h-3.5" />
+                <span>Kelola Anggota</span>
+              </>
+            ) : consensusResult ? (
               <>
                 <Scale className="w-3.5 h-3.5" />
                 <span>Lihat Hasil Konsensus</span>
@@ -173,23 +173,29 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
             {completedCount} / {totalDMs} DM
           </div>
           <p className="text-[11px] text-neutral-500">
-            Ketua, Wakil, Sekretaris & Bendahara
+            Pengambil Keputusan Aktif
           </p>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-2xs space-y-2">
           <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-            Penilaian Anda
+            {isAdmin ? 'Peran Akun Anda' : 'Penilaian Anda'}
           </span>
           <div className="text-2xl font-bold text-neutral-900">
-            {hasUserVoted ? 'Tersimpan' : 'Belum Diisi'}
+            {isAdmin ? 'Mode Admin' : hasUserVoted ? 'Tersimpan' : 'Belum Diisi'}
           </div>
           <p
             className={`text-[11px] font-medium ${
-              hasUserVoted ? 'text-emerald-600' : 'text-amber-600'
+              isAdmin
+                ? 'text-purple-600'
+                : hasUserVoted
+                ? 'text-emerald-600'
+                : 'text-amber-600'
             }`}
           >
-            {hasUserVoted
+            {isAdmin
+              ? 'Mengelola anggota & memantau suara'
+              : hasUserVoted
               ? 'Skor TOPSIS siap diagregasi Borda'
               : 'Segera isi matriks kriteria TOPSIS Anda'}
           </p>
@@ -222,7 +228,7 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
               Distribusi Skor Borda (Hasil TOPSIS) per Program Kerja
             </h3>
             <p className="text-xs text-neutral-500">
-              Akumulasi poin Borda dari peringkat TOPSIS Ketua, Wakil Ketua, Sekretaris, dan Bendahara secara real-time
+              Akumulasi poin Borda dari peringkat TOPSIS {totalDMs} pengambil keputusan secara real-time
             </p>
           </div>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
@@ -389,10 +395,10 @@ export const OverviewTab: React.FC<{ onNavigate: (tab: string) => void }> = ({
             </span>
             <button
               type="button"
-              onClick={() => onNavigate('voting')}
+              onClick={() => onNavigate(isAdmin ? 'members' : 'voting')}
               className="inline-flex items-center gap-1 text-purple-600 font-semibold hover:underline cursor-pointer"
             >
-              <span>Nilai Sekarang</span>
+              <span>{isAdmin ? 'Kelola Anggota' : 'Nilai Sekarang'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

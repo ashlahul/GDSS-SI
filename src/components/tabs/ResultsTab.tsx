@@ -10,6 +10,7 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { PrintBeritaAcara } from '@/components/PrintBeritaAcara';
+import { getRowMemberScores } from '@/lib/consensus-helpers';
 
 export const ResultsTab: React.FC<{ onNavigateToConsensus: () => void }> = ({
   onNavigateToConsensus,
@@ -47,7 +48,10 @@ export const ResultsTab: React.FC<{ onNavigateToConsensus: () => void }> = ({
   }
 
   const details = consensusResult.details;
-  const maxPossiblePoints = details.length * (decisionMakers.length || 4);
+  const headerMembers =
+    details.length > 0 ? getRowMemberScores(details[0], decisionMakers) : [];
+  const voterCount = headerMembers.length || decisionMakers.length || 4;
+  const maxPossiblePoints = details.length * voterCount;
   const topWinner = details[0];
 
   const formatRupiah = (val: number) =>
@@ -165,88 +169,76 @@ export const ResultsTab: React.FC<{ onNavigateToConsensus: () => void }> = ({
                   <th className="py-2.5 px-3">Kode</th>
                   <th className="py-2.5 px-3">Program Kerja</th>
                   <th className="py-2.5 px-3 text-right">Est. Anggaran</th>
-                  <th className="py-2.5 px-3 text-center">Ketua</th>
-                  <th className="py-2.5 px-3 text-center">Wakil Ketua</th>
-                  <th className="py-2.5 px-3 text-center">Sekretaris</th>
-                  <th className="py-2.5 px-3 text-center">Bendahara</th>
+                  {headerMembers.map((member) => (
+                    <th
+                      key={member.dmId}
+                      className="py-2.5 px-3 text-center whitespace-nowrap"
+                      title={`${member.dmName} (${member.roleLabel})`}
+                    >
+                      <div>{member.dmName.split(' ')[0]}</div>
+                      <div className="text-[10px] font-normal text-neutral-400 truncate max-w-[100px] mx-auto">
+                        {member.roleLabel.replace(' (Jabatan Tertinggi)', '')}
+                      </div>
+                    </th>
+                  ))}
                   <th className="py-2.5 px-3 text-center">Total Poin</th>
                   <th className="py-2.5 px-3.5">Status Keputusan</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 text-neutral-700 tabular-nums">
-                {details.map((row) => (
-                  <tr key={row.proker.id} className="hover:bg-neutral-50/80 transition-colors">
-                    <td className="py-2.5 px-3.5 text-center font-mono font-bold text-neutral-900">
-                      #{row.finalRank}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
-                        {row.proker.code}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className="font-medium text-blue-600">{row.proker.name}</span>
-                      <span className="block text-[10px] text-neutral-400">
-                        {row.proker.divisi}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-mono text-neutral-700 whitespace-nowrap">
-                      {formatRupiah(row.proker.anggaran)}
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-mono">
-                      <div>
-                        #{row.ketuaRank}{' '}
-                        <span className="text-purple-600 font-semibold">({row.ketuaPoints})</span>
-                      </div>
-                      <div className="text-[10px] text-neutral-400">
-                        V={row.ketuaTopsis.toFixed(3)}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-mono">
-                      <div>
-                        #{row.wakilRank}{' '}
-                        <span className="text-indigo-600 font-semibold">({row.wakilPoints})</span>
-                      </div>
-                      <div className="text-[10px] text-neutral-400">
-                        V={row.wakilTopsis.toFixed(3)}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-mono">
-                      <div>
-                        #{row.sekretarisRank}{' '}
-                        <span className="text-emerald-600 font-semibold">({row.sekretarisPoints})</span>
-                      </div>
-                      <div className="text-[10px] text-neutral-400">
-                        V={row.sekretarisTopsis.toFixed(3)}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-mono">
-                      <div>
-                        #{row.bendaharaRank}{' '}
-                        <span className="text-blue-600 font-semibold">({row.bendaharaPoints})</span>
-                      </div>
-                      <div className="text-[10px] text-neutral-400">
-                        V={row.bendaharaTopsis.toFixed(3)}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-mono font-bold text-purple-700">
-                      {row.totalBordaPoints}
-                    </td>
-                    <td className="py-2.5 px-3.5">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap ${
-                          row.statusRecommendation === 'Prioritas Utama'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : row.statusRecommendation === 'Prioritas Kedua'
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : 'bg-neutral-100 text-neutral-600 border-neutral-200'
-                        }`}
-                      >
-                        {row.statusRecommendation}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {details.map((row) => {
+                  const rowMembers = getRowMemberScores(row, decisionMakers);
+                  return (
+                    <tr key={row.proker.id} className="hover:bg-neutral-50/80 transition-colors">
+                      <td className="py-2.5 px-3.5 text-center font-mono font-bold text-neutral-900">
+                        #{row.finalRank}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                          {row.proker.code}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="font-medium text-blue-600">{row.proker.name}</span>
+                        <span className="block text-[10px] text-neutral-400">
+                          {row.proker.divisi}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono text-neutral-700 whitespace-nowrap">
+                        {formatRupiah(row.proker.anggaran)}
+                      </td>
+                      {rowMembers.map((m) => (
+                        <td key={m.dmId} className="py-2.5 px-3 text-center font-mono">
+                          <div>
+                            #{m.rank}{' '}
+                            <span className="text-purple-600 font-semibold">
+                              ({m.bordaPoints})
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-neutral-400">
+                            V={m.topsisScore.toFixed(3)}
+                          </div>
+                        </td>
+                      ))}
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-purple-700">
+                        {row.totalBordaPoints}
+                      </td>
+                      <td className="py-2.5 px-3.5">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap ${
+                            row.statusRecommendation === 'Prioritas Utama'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : row.statusRecommendation === 'Prioritas Kedua'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : 'bg-neutral-100 text-neutral-600 border-neutral-200'
+                          }`}
+                        >
+                          {row.statusRecommendation}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

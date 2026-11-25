@@ -5,8 +5,21 @@ import {
   DecisionMakerVote,
   ConsensusRecord,
   BordaDetailRow,
+  ConsensusMemberScore,
   RoleType,
 } from '@/types/gdss';
+
+export const SEED_ADMIN: DecisionMaker & { password: string } = {
+  id: 'dm-admin',
+  name: 'Administrator GDSS',
+  nim: '-',
+  email: 'admin@gmail.com',
+  password: 'password123',
+  role: 'ADMIN',
+  roleLabel: 'Administrator Sistem',
+  isHighestRole: false,
+  avatarColor: 'bg-neutral-800',
+};
 
 export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
   {
@@ -103,56 +116,36 @@ export const SEED_PROKERS: Omit<ProgramKerja, 'id'>[] = [
   },
 ];
 
-const ROLE_ORDER: Record<RoleType, number> = {
+export const ROLE_ORDER: Record<RoleType, number> = {
   KETUA: 1,
   WAKIL_KETUA: 2,
   SEKRETARIS: 3,
   BENDAHARA: 4,
+  ANGGOTA: 5,
+  ADMIN: 99,
 };
 
 export async function ensureSeeded() {
-  const existingDms = await prisma.decisionMaker.findMany({
-    select: { id: true, name: true, nim: true, email: true, password: true },
+  const adminCount = await prisma.decisionMaker.count({
+    where: { role: 'ADMIN' },
   });
-
-  const needsSync =
-    existingDms.length !== SEED_DECISION_MAKERS.length ||
-    SEED_DECISION_MAKERS.some((seed) => {
-      const found = existingDms.find((e) => e.id === seed.id);
-      return (
-        !found ||
-        found.name !== seed.name ||
-        found.nim !== seed.nim ||
-        found.email !== seed.email ||
-        found.password !== seed.password
-      );
+  if (adminCount === 0) {
+    await prisma.decisionMaker.upsert({
+      where: { id: SEED_ADMIN.id },
+      update: SEED_ADMIN,
+      create: SEED_ADMIN,
     });
+  }
 
-  if (needsSync) {
+  const voterCount = await prisma.decisionMaker.count({
+    where: { role: { not: 'ADMIN' } },
+  });
+  if (voterCount === 0) {
     for (const dm of SEED_DECISION_MAKERS) {
       await prisma.decisionMaker.upsert({
         where: { id: dm.id },
-        update: {
-          name: dm.name,
-          nim: dm.nim,
-          email: dm.email,
-          password: dm.password,
-          role: dm.role,
-          roleLabel: dm.roleLabel,
-          isHighestRole: dm.isHighestRole,
-          avatarColor: dm.avatarColor,
-        },
-        create: {
-          id: dm.id,
-          name: dm.name,
-          nim: dm.nim,
-          email: dm.email,
-          password: dm.password,
-          role: dm.role,
-          roleLabel: dm.roleLabel,
-          isHighestRole: dm.isHighestRole,
-          avatarColor: dm.avatarColor,
-        },
+        update: dm,
+        create: dm,
       });
     }
   }
@@ -170,7 +163,18 @@ export async function getFullGDSSState() {
   await ensureSeeded();
 
   const [dms, prokers, allVotes, latestConsensus] = await Promise.all([
-    prisma.decisionMaker.findMany(),
+    prisma.decisionMaker.findMany({
+      select: {
+        id: true,
+        name: true,
+        nim: true,
+        email: true,
+        role: true,
+        roleLabel: true,
+        isHighestRole: true,
+        avatarColor: true,
+      },
+    }),
     prisma.programKerja.findMany({
       orderBy: { code: 'asc' },
     }),
@@ -190,7 +194,7 @@ export async function getFullGDSSState() {
     }),
   ]);
 
-  const decisionMakers: DecisionMaker[] = dms
+  const accounts: DecisionMaker[] = dms
     .map((dm) => ({
       id: dm.id,
       name: dm.name,
@@ -201,7 +205,12 @@ export async function getFullGDSSState() {
       isHighestRole: dm.isHighestRole,
       avatarColor: dm.avatarColor,
     }))
-    .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
+    .sort((a, b) => {
+      const orderDiff = (ROLE_ORDER[a.role] ?? 50) - (ROLE_ORDER[b.role] ?? 50);
+      return orderDiff !== 0 ? orderDiff : a.name.localeCompare(b.name);
+    });
+
+  const decisionMakers = accounts.filter((a) => a.role !== 'ADMIN');
 
   const programKerjaList: ProgramKerja[] = prokers.map((p) => ({
     id: p.id,
@@ -235,33 +244,46 @@ export async function getFullGDSSState() {
 
   let consensusResult: ConsensusRecord | null = null;
   if (latestConsensus) {
-    const details: BordaDetailRow[] = latestConsensus.details.map((d) => ({
-      proker: {
-        id: d.proker.id,
-        code: d.proker.code,
-        name: d.proker.name,
-        divisi: d.proker.divisi,
-        description: d.proker.description,
-        anggaran: d.proker.anggaran,
-        targetPeserta: d.proker.targetPeserta,
-      },
-      ketuaRank: d.ketuaRank,
-      ketuaPoints: d.ketuaPoints,
-      ketuaTopsis: d.ketuaTopsis,
-      wakilRank: d.wakilRank,
-      wakilPoints: d.wakilPoints,
-      wakilTopsis: d.wakilTopsis,
-      sekretarisRank: d.sekretarisRank,
-      sekretarisPoints: d.sekretarisPoints,
-      sekretarisTopsis: d.sekretarisTopsis,
-      bendaharaRank: d.bendaharaRank,
-      bendaharaPoints: d.bendaharaPoints,
-      bendaharaTopsis: d.bendaharaTopsis,
-      totalBordaPoints: d.totalBordaPoints,
-      finalRank: d.finalRank,
-      statusRecommendation:
-        d.statusRecommendation as BordaDetailRow['statusRecommendation'],
-    }));
+    const details: BordaDetailRow[] = latestConsensus.details.map((d) => {
+      let memberScores: ConsensusMemberScore[] = [];
+      try {
+        const parsed = JSON.parse(d.memberScoresJson || '[]');
+        if (Array.isArray(parsed)) {
+          memberScores = parsed;
+        }
+      } catch {
+        memberScores = [];
+      }
+
+      return {
+        proker: {
+          id: d.proker.id,
+          code: d.proker.code,
+          name: d.proker.name,
+          divisi: d.proker.divisi,
+          description: d.proker.description,
+          anggaran: d.proker.anggaran,
+          targetPeserta: d.proker.targetPeserta,
+        },
+        ketuaRank: d.ketuaRank,
+        ketuaPoints: d.ketuaPoints,
+        ketuaTopsis: d.ketuaTopsis,
+        wakilRank: d.wakilRank,
+        wakilPoints: d.wakilPoints,
+        wakilTopsis: d.wakilTopsis,
+        sekretarisRank: d.sekretarisRank,
+        sekretarisPoints: d.sekretarisPoints,
+        sekretarisTopsis: d.sekretarisTopsis,
+        bendaharaRank: d.bendaharaRank,
+        bendaharaPoints: d.bendaharaPoints,
+        bendaharaTopsis: d.bendaharaTopsis,
+        memberScores,
+        totalBordaPoints: d.totalBordaPoints,
+        finalRank: d.finalRank,
+        statusRecommendation:
+          d.statusRecommendation as BordaDetailRow['statusRecommendation'],
+      };
+    });
 
     consensusResult = {
       calculatedAt: latestConsensus.calculatedAt.toISOString(),
@@ -271,6 +293,7 @@ export async function getFullGDSSState() {
   }
 
   return {
+    accounts,
     decisionMakers,
     programKerjaList,
     votes,
