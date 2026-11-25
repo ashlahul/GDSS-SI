@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum RoleType {
+  KETUA
+  SEKRETARIS
+  BENDAHARA
+}
+
+model DecisionMaker {
+  id               String            @id
+  name             String
+  email            String            @unique
+  password         String
+  role             RoleType          @unique
+  roleLabel        String
+  isHighestRole    Boolean           @default(false)
+  avatarColor      String
+  votes            Vote[]
+  consensusRecords ConsensusRecord[]
+}
+
+model ProgramKerja {
+  id               String            @id @default(cuid())
+  code             String            @unique
+  name             String
+  divisi           String
+  description      String
+  anggaran         Int
+  targetPeserta    String
+  createdAt        DateTime          @default(now())
+  votes            Vote[]
+  consensusDetails ConsensusDetail[]
+}
+
+model Vote {
+  id              String        @id @default(cuid())
+  decisionMakerId String
+  prokerId        String
+  rank            Int
+  bordaPoints     Int
+  submittedAt     DateTime      @default(now())
+  decisionMaker   DecisionMaker @relation(fields: [decisionMakerId], references: [id], onDelete: Cascade)
+  proker          ProgramKerja  @relation(fields: [prokerId], references: [id], onDelete: Cascade)
+
+  @@unique([decisionMakerId, prokerId])
+}
+
+model ConsensusRecord {
+  id               String            @id @default(cuid())
+  calculatedAt     DateTime          @default(now())
+  authorizedById   String
+  authorizedByName String
+  authorizedBy     DecisionMaker     @relation(fields: [authorizedById], references: [id])
+  details          ConsensusDetail[]
+}
+
+model ConsensusDetail {
+  id                   String          @id @default(cuid())
+  consensusId          String
+  prokerId             String
+  ketuaRank            Int
+  ketuaPoints          Int
+  sekretarisRank       Int
+  sekretarisPoints     Int
+  bendaharaRank        Int
+  bendaharaPoints      Int
+  totalBordaPoints     Int
+  finalRank            Int
+  statusRecommendation String
+  consensus            ConsensusRecord @relation(fields: [consensusId], references: [id], onDelete: Cascade)
+  proker               ProgramKerja    @relation(fields: [prokerId], references: [id], onDelete: Cascade)
+
+  @@unique([consensusId, prokerId])
+}

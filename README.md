@@ -1,34 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GDSS Ormawa — Sistem Pendukung Keputusan Kelompok (Metode Borda)
 
-## Getting Started
+Website **Group Decision Support System (GDSS)** untuk penentuan prioritas program kerja organisasi mahasiswa menggunakan **Metode Borda (Borda Count)**, dibangun dengan **Next.js (App Router)**, **Prisma ORM**, **PostgreSQL**, dan **Tailwind CSS** untuk deployment di **Vercel**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Fitur Utama Sesuai Ketentuan Tugas UAS
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Multi-Account Login & Role Switcher (3 Decision Maker):**
+   - **Ketua Umum** (`ketua@ormawa.ac.id` / `ketua123`) — *Jabatan Tertinggi*
+   - **Sekretaris Jenderal** (`sekretaris@ormawa.ac.id` / `sekretaris123`)
+   - **Bendahara Umum** (`bendahara@ormawa.ac.id` / `bendahara123`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. **Database PostgreSQL + Prisma ORM (Multi-Device Sync):**
+   - Seluruh data (`DecisionMaker`, `ProgramKerja`, `Vote`, `ConsensusRecord`, `ConsensusDetail`) tersimpan di PostgreSQL.
+   - Dilengkapi *auto-seeding* otomatis saat pertama kali diakses apabila tabel masih kosong.
 
-## Learn More
+3. **Penilaian Preferensi Individu & Konsensus Borda:**
+   - Setiap pengambil keputusan menyusun urutan prioritas alternatif dari peringkat 1 hingga $N$.
+   - Tombol **"Hitung & Sahkan Konsensus (Metode Borda)"** hanya terbuka setelah ketiga DM selesai menilai, dan hanya dapat dieksekusi oleh akun **Ketua Umum**.
 
-To learn more about Next.js, take a look at the following resources:
+4. **Transparansi Hasil & Cetak Berita Acara:**
+   - Semua akun dapat melihat podium prioritas, grafik skor, matriks transparansi perhitungan, dan mencetak Berita Acara PDF resmi.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Setup Database PostgreSQL (Neon / Supabase)
 
-## Deploy on Vercel
+1. Buat database PostgreSQL gratis di [Neon](https://neon.tech) atau [Supabase](https://supabase.com) dan salin `Connection String`-nya.
+2. Buka file `.env` (salin dari `.env.example` jika belum ada) dan isi:
+   ```env
+   DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
+   ```
+3. Push skema tabel Prisma ke PostgreSQL:
+   ```bash
+   npx prisma db push
+   ```
+4. Jalankan server lokal:
+   ```bash
+   npm run dev
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy ke Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push proyek ini ke repository GitHub Anda (file `.env` otomatis terabaikan oleh `.gitignore`).
+2. Buka [vercel.com](https://vercel.com) → **Add New Project** → pilih repository Anda.
+3. Pada bagian **Environment Variables**, tambahkan:
+   - Key: `DATABASE_URL`
+   - Value: *Connection string PostgreSQL Neon/Supabase Anda*
+4. Klik **Deploy**.

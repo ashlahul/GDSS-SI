@@ -1,0 +1,217 @@
+import { prisma } from '@/lib/prisma';
+import {
+  DecisionMaker,
+  ProgramKerja,
+  DecisionMakerVote,
+  ConsensusRecord,
+  BordaDetailRow,
+  RoleType,
+} from '@/types/gdss';
+
+export const SEED_DECISION_MAKERS: (DecisionMaker & { password: string })[] = [
+  {
+    id: 'dm-ketua',
+    name: 'Moch. Asy-Syauqi',
+    email: 'ketua@ormawa.ac.id',
+    password: 'ketua123',
+    role: 'KETUA',
+    roleLabel: 'Ketua Umum (Jabatan Tertinggi)',
+    isHighestRole: true,
+    avatarColor: 'bg-amber-600',
+  },
+  {
+    id: 'dm-sekretaris',
+    name: 'Anisa Rahmawati',
+    email: 'sekretaris@ormawa.ac.id',
+    password: 'sekretaris123',
+    role: 'SEKRETARIS',
+    roleLabel: 'Sekretaris Jenderal',
+    isHighestRole: false,
+    avatarColor: 'bg-emerald-600',
+  },
+  {
+    id: 'dm-bendahara',
+    name: 'Budi Pratama',
+    email: 'bendahara@ormawa.ac.id',
+    password: 'bendahara123',
+    role: 'BENDAHARA',
+    roleLabel: 'Bendahara Umum',
+    isHighestRole: false,
+    avatarColor: 'bg-blue-600',
+  },
+];
+
+export const SEED_PROKERS: Omit<ProgramKerja, 'id'>[] = [
+  {
+    code: 'PK-01',
+    name: 'Latihan Keterampilan Manajemen Mahasiswa (LKMM-TD)',
+    divisi: 'Kaderisasi & Pengembangan Organisasi',
+    description:
+      'Pelatihan kepemimpinan dasar dan manajerial untuk anggota baru dan mahasiswa umum.',
+    anggaran: 8500000,
+    targetPeserta: '120 Mahasiswa',
+  },
+  {
+    code: 'PK-02',
+    name: 'National Tech Expo & Hackathon 2027',
+    divisi: 'Riset & Teknologi Informasi',
+    description:
+      'Kompetisi pengembangan aplikasi dan pameran inovasi teknologi tingkat nasional.',
+    anggaran: 18500000,
+    targetPeserta: '40 Tim / 200 Mahasiswa Se-Indonesia',
+  },
+  {
+    code: 'PK-03',
+    name: 'Bakti Desa & Pengabdian Masyarakat Berkelanjutan',
+    divisi: 'Pengabdian Masyarakat & Sosial',
+    description:
+      'Sosialisasi literasi digital, renovasi fasilitas baca, dan cek kesehatan gratis di desa binaan.',
+    anggaran: 7200000,
+    targetPeserta: '350 Warga Desa Sukamaju',
+  },
+  {
+    code: 'PK-04',
+    name: 'Company Visit & Career Mentoring Day',
+    divisi: 'Hubungan Industri & Alumni',
+    description:
+      'Kunjungan ke 3 perusahaan teknologi terkemuka dan workshop review CV/portofolio bersama praktisi.',
+    anggaran: 6000000,
+    targetPeserta: '80 Mahasiswa Tingkat Akhir',
+  },
+  {
+    code: 'PK-05',
+    name: 'Dies Natalis & Gebyar Seni Budaya Ormawa',
+    divisi: 'Minat, Bakat & Apresiasi Seni',
+    description:
+      'Peringatan ulang tahun ormawa dengan pentas seni musik, teater budaya, dan bazar UMKM mahasiswa.',
+    anggaran: 12000000,
+    targetPeserta: '500 Mahasiswa & Tamu Undangan',
+  },
+];
+
+export async function ensureSeeded() {
+  const dmCount = await prisma.decisionMaker.count();
+  if (dmCount === 0) {
+    await prisma.decisionMaker.createMany({
+      data: SEED_DECISION_MAKERS.map((dm) => ({
+        id: dm.id,
+        name: dm.name,
+        email: dm.email,
+        password: dm.password,
+        role: dm.role,
+        roleLabel: dm.roleLabel,
+        isHighestRole: dm.isHighestRole,
+        avatarColor: dm.avatarColor,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  const prokerCount = await prisma.programKerja.count();
+  if (prokerCount === 0) {
+    await prisma.programKerja.createMany({
+      data: SEED_PROKERS,
+      skipDuplicates: true,
+    });
+  }
+}
+
+export async function getFullGDSSState() {
+  await ensureSeeded();
+
+  const [dms, prokers, allVotes, latestConsensus] = await Promise.all([
+    prisma.decisionMaker.findMany({
+      orderBy: { isHighestRole: 'desc' },
+    }),
+    prisma.programKerja.findMany({
+      orderBy: { code: 'asc' },
+    }),
+    prisma.vote.findMany({
+      orderBy: { rank: 'asc' },
+    }),
+    prisma.consensusRecord.findFirst({
+      orderBy: { calculatedAt: 'desc' },
+      include: {
+        details: {
+          orderBy: { finalRank: 'asc' },
+          include: {
+            proker: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const decisionMakers: DecisionMaker[] = dms.map((dm) => ({
+    id: dm.id,
+    name: dm.name,
+    email: dm.email,
+    role: dm.role as RoleType,
+    roleLabel: dm.roleLabel,
+    isHighestRole: dm.isHighestRole,
+    avatarColor: dm.avatarColor,
+  }));
+
+  const programKerjaList: ProgramKerja[] = prokers.map((p) => ({
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    divisi: p.divisi,
+    description: p.description,
+    anggaran: p.anggaran,
+    targetPeserta: p.targetPeserta,
+  }));
+
+  const votes: Record<string, DecisionMakerVote> = {};
+  for (const dm of decisionMakers) {
+    const userVotes = allVotes.filter((v) => v.decisionMakerId === dm.id);
+    votes[dm.id] = {
+      userId: dm.id,
+      submittedAt:
+        userVotes.length > 0 ? userVotes[0].submittedAt.toISOString() : null,
+      rankings: userVotes.map((v) => ({
+        prokerId: v.prokerId,
+        rank: v.rank,
+        bordaPoints: v.bordaPoints,
+      })),
+    };
+  }
+
+  let consensusResult: ConsensusRecord | null = null;
+  if (latestConsensus) {
+    const details: BordaDetailRow[] = latestConsensus.details.map((d) => ({
+      proker: {
+        id: d.proker.id,
+        code: d.proker.code,
+        name: d.proker.name,
+        divisi: d.proker.divisi,
+        description: d.proker.description,
+        anggaran: d.proker.anggaran,
+        targetPeserta: d.proker.targetPeserta,
+      },
+      ketuaRank: d.ketuaRank,
+      ketuaPoints: d.ketuaPoints,
+      sekretarisRank: d.sekretarisRank,
+      sekretarisPoints: d.sekretarisPoints,
+      bendaharaRank: d.bendaharaRank,
+      bendaharaPoints: d.bendaharaPoints,
+      totalBordaPoints: d.totalBordaPoints,
+      finalRank: d.finalRank,
+      statusRecommendation:
+        d.statusRecommendation as BordaDetailRow['statusRecommendation'],
+    }));
+
+    consensusResult = {
+      calculatedAt: latestConsensus.calculatedAt.toISOString(),
+      authorizedBy: latestConsensus.authorizedByName,
+      details,
+    };
+  }
+
+  return {
+    decisionMakers,
+    programKerjaList,
+    votes,
+    consensusResult,
+  };
+}
