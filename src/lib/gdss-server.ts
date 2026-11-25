@@ -126,9 +126,12 @@ export const ROLE_ORDER: Record<RoleType, number> = {
 };
 
 export async function ensureSeeded() {
-  const adminCount = await prisma.decisionMaker.count({
-    where: { role: 'ADMIN' },
-  });
+  const [adminCount, voterCount, prokerCount] = await Promise.all([
+    prisma.decisionMaker.count({ where: { role: 'ADMIN' } }),
+    prisma.decisionMaker.count({ where: { role: { not: 'ADMIN' } } }),
+    prisma.programKerja.count(),
+  ]);
+
   if (adminCount === 0) {
     await prisma.decisionMaker.upsert({
       where: { id: SEED_ADMIN.id },
@@ -137,9 +140,6 @@ export async function ensureSeeded() {
     });
   }
 
-  const voterCount = await prisma.decisionMaker.count({
-    where: { role: { not: 'ADMIN' } },
-  });
   if (voterCount === 0) {
     for (const dm of SEED_DECISION_MAKERS) {
       await prisma.decisionMaker.upsert({
@@ -150,7 +150,6 @@ export async function ensureSeeded() {
     }
   }
 
-  const prokerCount = await prisma.programKerja.count();
   if (prokerCount === 0) {
     await prisma.programKerja.createMany({
       data: SEED_PROKERS,
@@ -159,10 +158,8 @@ export async function ensureSeeded() {
   }
 }
 
-export async function getFullGDSSState() {
-  await ensureSeeded();
-
-  const [dms, prokers, allVotes, latestConsensus] = await Promise.all([
+async function queryRawGDSSState() {
+  return Promise.all([
     prisma.decisionMaker.findMany({
       select: {
         id: true,
@@ -193,6 +190,17 @@ export async function getFullGDSSState() {
       },
     }),
   ]);
+}
+
+export async function getFullGDSSState() {
+  let [dms, prokers, allVotes, latestConsensus] = await queryRawGDSSState();
+
+  const hasAdmin = dms.some((d) => d.role === 'ADMIN');
+  const hasVoter = dms.some((d) => d.role !== 'ADMIN');
+  if (!hasAdmin || !hasVoter || prokers.length === 0) {
+    await ensureSeeded();
+    [dms, prokers, allVotes, latestConsensus] = await queryRawGDSSState();
+  }
 
   const accounts: DecisionMaker[] = dms
     .map((dm) => ({

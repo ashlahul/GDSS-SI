@@ -5,7 +5,7 @@ import { useGDSS } from '@/context/GDSSContext';
 import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
-  const { loginWithCredentials, dbError } = useGDSS();
+  const { loginWithCredentials, dbError, refreshData, isLoadingData } = useGDSS();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -48,9 +48,19 @@ export const LoginView: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <div className="px-6 pb-4 space-y-4">
             {dbError && (
-              <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/50 p-2.5 rounded-lg flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                <span>{dbError}</span>
+              <div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/50 p-2.5 rounded-lg flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                  <span>{dbError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => refreshData()}
+                  disabled={isLoadingData}
+                  className="shrink-0 px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-semibold text-[11px] transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isLoadingData ? 'Memuat...' : 'Coba lagi'}
+                </button>
               </div>
             )}
 

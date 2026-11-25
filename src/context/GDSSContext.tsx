@@ -140,6 +140,27 @@ function loadSession(): {
 
 const emptySubscribe = () => () => {};
 
+async function fetchGDSSStateWithRetry(maxAttempts = 2) {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch('/api/gdss', { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal memuat data dari PostgreSQL');
+      }
+      return data;
+    } catch (err) {
+      lastError =
+        err instanceof Error ? err : new Error('Gagal terhubung ke PostgreSQL.');
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      }
+    }
+  }
+  throw lastError || new Error('Gagal terhubung ke PostgreSQL.');
+}
+
 const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -200,11 +221,7 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoadingData(true);
     setDbError(null);
     try {
-      const res = await fetch('/api/gdss', { cache: 'no-store' });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal memuat data dari PostgreSQL');
-      }
+      const data = await fetchGDSSStateWithRetry(2);
       applyServerState(data);
     } catch (err) {
       const msg =
@@ -217,14 +234,7 @@ const InnerGDSSProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     let active = true;
-    fetch('/api/gdss', { cache: 'no-store' })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || 'Gagal memuat data dari PostgreSQL');
-        }
-        return data;
-      })
+    fetchGDSSStateWithRetry(2)
       .then((data) => {
         if (!active) return;
         applyServerState(data);
